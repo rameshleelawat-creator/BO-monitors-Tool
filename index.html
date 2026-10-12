@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BO Target Monitor</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#b3261e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<script src="xlsx.full.min.js"></script>
+<style>
+:root{--ink:#1f2328;--mut:#6b6f76;--bg:#faf9f7;--card:#fff;--ln:#e3dfd8;--ac:#b3261e;--ok:#1e7b4f;--bar:#ece8e1}
+@media(prefers-color-scheme:dark){:root{--ink:#ece9e4;--mut:#9a9da3;--bg:#17181a;--card:#222426;--ln:#35373a;--ac:#e5594f;--ok:#4cc38a;--bar:#303236}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-bottom:40px}
+header{background:var(--ac);color:#fff;padding:12px 14px}
+header b{font-size:17px;display:block}header span{font-size:12px;opacity:.85}
+nav{display:flex;gap:4px;overflow-x:auto;padding:8px 10px;background:var(--card);border-bottom:1px solid var(--ln);position:sticky;top:0;z-index:5}
+nav button{flex:0 0 auto;white-space:nowrap;border:0;background:none;color:var(--mut);padding:8px 12px;font:inherit;border-radius:8px}
+nav button.on{background:var(--ac);color:#fff}
+main{padding:12px;max-width:720px;margin:auto}
+section{background:var(--card);border:1px solid var(--ln);border-radius:10px;padding:12px;margin-bottom:12px}
+h3{margin:0 0 8px;font-size:15px}
+label{display:block;font-size:12px;color:var(--mut);margin-bottom:6px}
+input,select,textarea,button.b{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--ln);border-radius:8px;padding:8px;margin-top:2px}
+.g{display:grid;grid-template-columns:1fr 1fr;gap:8px}.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+button.b{background:var(--ac);color:#fff;border:0;text-align:center;cursor:pointer;margin-top:8px}
+button.b.s{background:var(--bg);color:var(--ink);border:1px solid var(--ln)}
+button.x{width:auto;background:none;border:0;color:var(--ac);font-size:20px;padding:0 6px;cursor:pointer}
+.row{display:flex;gap:8px;align-items:center;justify-content:space-between}
+details{border:1px solid var(--ln);border-radius:8px;padding:8px;margin-bottom:8px}
+summary{cursor:pointer;font-weight:600}
+pre{white-space:pre-wrap;word-break:break-word;background:var(--bg);border:1px solid var(--ln);border-radius:8px;padding:10px;font:12.5px/1.5 ui-monospace,Menlo,monospace;max-height:340px;overflow:auto}
+.bar{height:8px;background:var(--bar);border-radius:4px;margin-top:4px}.bar i{display:block;height:8px;border-radius:4px;background:var(--ac)}
+.bar.done i{background:var(--ok)}
+.sm{font-size:12px;color:var(--mut)}.ok{color:var(--ok)}.er{color:var(--ac)}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cd{border:1px solid var(--ln);border-radius:8px;padding:8px}.cd b{font-size:17px;display:block}
+a.lk{display:inline-block;padding:8px 14px;border-radius:8px;background:var(--ac);color:#fff;text-decoration:none;margin-right:8px}
+a.lk.s{background:var(--ok)}
+#m{position:fixed;left:12px;right:12px;bottom:12px;background:var(--ink);color:var(--bg);padding:10px 12px;border-radius:8px;display:none;z-index:9;font-size:14px}
+</style></head><body>
+<header><b>BO Target Monitor</b><span id="sd"></span></header>
+<nav id="nav"></nav><main id="app"></main><div id="m"></div>
+<script>
+var K='bom_v1',TABS=['Setup','Visit','Daily','Report','Dashboard'],tab=0,S;
+function $(i){return document.getElementById(i)}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function fmt(n){return Math.round(n||0).toLocaleString('en-IN')}
+function iso(d){var m=d.getMonth()+1,x=d.getDate();return d.getFullYear()+'-'+(m<10?'0':'')+m+'-'+(x<10?'0':'')+x}
+function dm(s){return s.split('-').reverse().join('/')}
+function msg(t,bad){var e=$('m');e.textContent=t;e.style.display='block';e.style.background=bad?'#b3261e':'';e.style.color=bad?'#fff':'';clearTimeout(msg.t);msg.t=setTimeout(function(){e.style.display='none'},3200)}
+function def(){var n=new Date();return{name:'Sub Division',cats:['Mail','International Mail','POSB Accounts','PLI/RPLI Premium','CCS'].map(function(c,i){return{id:'c'+i,n:c}}),
+per:[{f:iso(new Date(n.getFullYear(),n.getMonth(),1)),t:iso(new Date(n.getFullYear(),n.getMonth()+1,0)),tg:{c2:{c:10,a:0},c3:{c:0,a:3500}}}],
+bos:[],mem:[],E:{},V:{},imp:[],me:'',d:iso(n),pi:0,vb:'',dc:'all',ml:15,vw:3,vn:{},pk:''}}
+function load(){try{var j=JSON.parse(localStorage.getItem(K));if(j){var r=Object.assign(def(),j);r.d=iso(new Date());return r}}catch(e){}return def()}
+function save(){try{localStorage.setItem(K,JSON.stringify(S))}catch(e){msg('Could not save on this device',1)}}
+S=load();
+function P(d){return S.per.filter(function(p){return d>=p.f&&d<=p.t})[0]||S.per[0]}
+function tgOf(p,c){return p.tg[c]||{c:0,a:0}}
+function ent(b,d){return S.E[b+'|'+d]}
+function gE(b,d){var k=b+'|'+d;return S.E[k]||(S.E[k]={cats:{},lg:0,lc:0,dk:0})}
+function cv(e,c){return(e&&e.cats&&e.cats[c])||{c:0,a:0}}
+function mine(){return S.bos.filter(function(b){return b.own==S.me})}
+function agg(bs,f,t){var r={cats:{},lg:0,lc:0,dk:0};S.cats.forEach(function(c){r.cats[c.id]={c:0,a:0}});
+for(var k in S.E){var q=k.split('|');if(q[1]<f||q[1]>t||bs.indexOf(q[0])<0)continue;var e=S.E[k];
+S.cats.forEach(function(c){var x=cv(e,c.id);r.cats[c.id].c+=x.c;r.cats[c.id].a+=x.a});r.lg+=e.lg||0;r.lc+=e.lc||0;r.dk+=e.dk||0}return r}
+function names(a){return a.map(function(b){return b.n})}
+
+/* ---------- navigation ---------- */
+function R0(){$('sd').textContent=S.name;
+$('nav').innerHTML=TABS.map(function(t,i){return'<button class="'+(i==tab?'on':'')+'" onclick="tab='+i+';R();scrollTo(0,0)">'+t+'</button>'}).join('');
+if(!S.me&&S.mem.length)S.me=S.mem[0].n;
+$('app').innerHTML=[vSetup,vVisit,vDaily,vReport,vDash][tab]()}
+function ctx(){return'<section><div class="g"><label>I am<select data-k="s:me">'+(S.mem.map(function(m){return'<option'+(m.n==S.me?' selected':'')+'>'+esc(m.n)+'</option>'}).join('')||'<option>No team yet</option>')+'</select></label><label>Date<input type="date" data-k="s:d" value="'+S.d+'"></label></div></section>'}
+function inp(k,v,t,ph){return'<input '+(t||'type="number" min="0" inputmode="decimal"')+' data-k="'+k+'" value="'+esc(v||'')+'" '+(ph?'placeholder="'+ph+'"':'')+'>'}
+
+/* ---------- setup ---------- */
+function vSetup(){var p=S.per[S.pi],h='';
+h+='<section><h3>Sub division</h3><label>Name'+inp('g:name',S.name,'type="text"')+'</label><label>Minimum leads ready per visit BO'+inp('g:ml',S.ml)+'</label></section>';
+h+='<section><h3>Team</h3>'+S.mem.map(function(m,i){return'<div class="row"><span>'+esc(m.n)+' <span class="sm">'+m.r+'</span></span><button class="x" onclick="delMem('+i+')">&times;</button></div>'}).join('')+
+'<div class="g3" style="margin-top:6px"><label style="grid-column:1/3">Name<input id="mn" type="text"></label><label>Role<select id="mr"><option>MO</option><option>ME</option><option>OA</option></select></label></div><button class="b s" onclick="addMem()">Add team member</button></section>';
+h+='<section><h3>Categories</h3><div class="sm">Every category tracks Count and Amount.</div>'+S.cats.map(function(c){return'<div class="row">'+inp('cat:'+c.id,c.n,'type="text"')+'<button class="x" onclick="delCat(\''+c.id+'\')">&times;</button></div>'}).join('')+
+'<label>New category<input id="nc" type="text"></label><button class="b s" onclick="addCat()">Add category</button></section>';
+h+='<section><h3>Target period</h3><label>Period<select data-k="s:pi">'+S.per.map(function(x,i){return'<option value="'+i+'"'+(i==S.pi?' selected':'')+'>'+dm(x.f)+' to '+dm(x.t)+'</option>'}).join('')+'</select></label>'+
+'<div class="g"><label>From<input type="date" data-k="per:f" value="'+p.f+'"></label><label>To<input type="date" data-k="per:t" value="'+p.t+'"></label></div>'+
+'<div class="sm">Target per BO for this period</div>'+S.cats.map(function(c){var t=tgOf(p,c.id);return'<div class="g"><label>'+esc(c.n)+' (count)'+inp('tg:'+c.id+':c',t.c)+'</label><label>Amount (Rs)'+inp('tg:'+c.id+':a',t.a)+'</label></div>'}).join('')+
+'<button class="b s" onclick="addPer()">Add new period</button></section>';
+h+='<section><h3>Branch offices ('+S.bos.length+')</h3><div class="sm">Excel columns: Name of HO/SO, Name of BO, Name of BPM, Mobile Number. Optional: Assigned To, Type (V = visit, M = monitor), Visit Date.</div>'+
+'<input type="file" accept=".xlsx,.xls,.csv" onchange="xl(this)"><button class="b s" onclick="tpl()">Download Excel template</button>'+
+'<div class="g" style="margin-top:8px"><label>BO name<input id="bn" type="text"></label><label>SO<input id="bs" type="text"></label><label>BPM<input id="bp" type="text"></label><label>Mobile<input id="bm" type="tel"></label></div><button class="b s" onclick="addBo()">Add BO manually</button>'+
+'<details style="margin-top:10px"><summary>BO list, assignment and visit dates</summary>'+S.bos.map(function(b){var i=S.bos.indexOf(b);return'<div style="border-top:1px solid var(--ln);padding:6px 0"><div class="row"><b>'+esc(b.n)+'</b><button class="x" onclick="delBo('+i+')">&times;</button></div>'+bed(b)+'<div class="g3"><label>Owner<select data-k="bo:'+esc(b.n)+':own"><option value=""></option>'+S.mem.map(function(m){return'<option'+(m.n==b.own?' selected':'')+'>'+esc(m.n)+'</option>'}).join('')+'</select></label><label>Type<select data-k="bo:'+esc(b.n)+':ty"><option value="V"'+(b.ty=='V'?' selected':'')+'>Visit</option><option value="M"'+(b.ty!='V'?' selected':'')+'>Monitor</option></select></label><label>Visit date<input type="date" data-k="bo:'+esc(b.n)+':vd" value="'+(b.vd||'')+'"></label></div>'+ctg(b)+'</div>'}).join('')+'</details></section>';
+h+=vSched();return h}
+function addMem(){var n=$('mn').value.trim();if(!n)return msg('Enter a name',1);if(S.mem.some(function(m){return m.n==n}))return msg('Name already added',1);S.mem.push({n:n,r:$('mr').value});if(!S.me)S.me=n;save();R()}
+function delMem(i){if(confirm('Remove '+S.mem[i].n+'?')){S.mem.splice(i,1);S.me=S.mem[0]?S.mem[0].n:'';save();R()}}
+function addCat(){var n=$('nc').value.trim();if(!n)return msg('Enter a category name',1);S.cats.push({id:'c'+Date.now(),n:n});save();R()}
+function delCat(id){if(confirm('Remove this category? Its entries stay saved but are hidden.')){S.cats=S.cats.filter(function(c){return c.id!=id});save();R()}}
+function addPer(){var p=S.per[S.pi],t=JSON.parse(JSON.stringify(p.tg)),d=new Date(p.t+'T00:00:00');d.setDate(d.getDate()+1);
+S.per.push({f:iso(d),t:iso(new Date(d.getFullYear(),d.getMonth()+1,0)),tg:t});S.pi=S.per.length-1;save();R();msg('New period added. Set its dates and targets.')}
+function addBo(){var n=$('bn').value.trim().toUpperCase();if(!n)return msg('Enter BO name',1);
+if(S.bos.some(function(b){return b.n==n}))return msg('BO already exists',1);S.bos.push({n:n,so:$('bs').value.trim(),bpm:$('bp').value.trim(),mob:$('bm').value.trim(),own:S.me,ty:'M',vd:''});save();R()}
+function delBo(i){if(confirm('Remove '+S.bos[i].n+'?')){S.bos.splice(i,1);save();R()}}
+function tpl(){var w=XLSX.utils.aoa_to_sheet([['Sr No','Name of HO/SO','Name of BO','Name of BPM','Mobile Number','Assigned To','Type (V/M)','Visit Date (DD/MM/YYYY)'],[1,'Example SO','EXAMPLE BO','BPM Name','9999999999','MO-1','V','12/10/2026']]),b=XLSX.utils.book_new();XLSX.utils.book_append_sheet(b,w,'BO List');XLSX.writeFile(b,'BO_List_Template.xlsx')}
+function pd(v){if(!v)return'';if(typeof v=='number'){var o=XLSX.SSF.parse_date_code(v);return o?o.y+'-'+('0'+o.m).slice(-2)+'-'+('0'+o.d).slice(-2):''}
+var m=String(v).trim().match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);return m?m[3]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[1]).slice(-2):(/^\d{4}-\d{2}-\d{2}$/.test(String(v).trim())?String(v).trim():'')}
+function xl(el){var f=el.files[0];if(!f)return;if(typeof XLSX=='undefined')return msg('Excel reader did not load. Check internet and reload.',1);var r=new FileReader();
+r.onload=function(){try{var wb=XLSX.read(r.result,{type:'array'}),rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''}),re=/name of bo|^bo( name)?$/i,hi=-1,i;
+for(i=0;i<rows.length;i++){if(rows[i].some(function(c){return re.test(String(c).trim())})){hi=i;break}}
+if(hi<0)return msg('Header "Name of BO" not found',1);
+var hd=rows[hi].map(function(c){return String(c).trim().toLowerCase()}),an=[];hd.forEach(function(h,j){if(re.test(h))an.push(j)});
+var add=0,upd=0;
+an.forEach(function(a,ai){var end=ai+1<an.length?an[ai+1]-3:hd.length-1,col={};
+for(var j=Math.max(0,a-1);j<=end;j++){var h=hd[j];if(j==a)continue;if(/\bso\b/.test(h))col.so=j;else if(/bpm/.test(h))col.bpm=j;else if(/mobile|phone/.test(h))col.mob=j;else if(/assigned|owner/.test(h))col.own=j;else if(/^type/.test(h))col.ty=j;else if(/visit/.test(h))col.vd=j}
+for(var r2=hi+1;r2<rows.length;r2++){var row=rows[r2],n=String(row[a]).trim().toUpperCase();if(!n)continue;
+var g=function(k){return col[k]==null?'':String(row[col[k]]).trim()},o=S.bos.filter(function(b){return b.n==n})[0];
+if(!o){o={n:n,so:'',bpm:'',mob:'',own:S.me,ty:'M',vd:''};S.bos.push(o);add++}else upd++;
+if(g('so'))o.so=g('so');if(g('bpm'))o.bpm=g('bpm');if(g('mob'))o.mob=g('mob');
+if(g('own'))o.own=g('own');if(g('ty'))o.ty=/^v/i.test(g('ty'))?'V':'M';if(col.vd!=null&&pd(row[col.vd]))o.vd=pd(row[col.vd]);
+if(o.own&&!S.mem.some(function(m){return m.n==o.own})){S.mem.push({n:o.own,r:/^me/i.test(o.own)?'ME':/^oa/i.test(o.own)?'OA':'MO'})}}});
+save();R();msg(add+' BO added, '+upd+' updated')}catch(e){msg('Could not read this file',1)}};r.readAsArrayBuffer(f)}
+
+/* ---------- visit ---------- */
+function catFields(b){var e=ent(b,S.d);return S.cats.map(function(c){var x=cv(e,c.id);return'<div class="g"><label>'+esc(c.n)+' (count)'+inp('e:'+b+':'+c.id+':c',x.c)+'</label><label>Amount (Rs)'+inp('e:'+b+':'+c.id+':a',x.a)+'</label></div>'}).join('')}
+function extra(b){var e=ent(b,S.d)||{};return'<div class="g3"><label>Leads generated'+inp('x:'+b+':lg',e.lg)+'</label><label>Leads converted'+inp('x:'+b+':lc',e.lc)+'</label><label>Dak Sewa app'+inp('x:'+b+':dk',e.dk)+'</label></div>'}
+function vVisit(){var bs=mine().filter(function(b){return b.ty=='V'}),h=ctx();
+if(!bs.length)return h+'<section>No visit BO assigned to '+esc(S.me)+'. In Setup, set the BO type to Visit and the owner to this person.</section>';
+var b=bs.filter(function(x){return x.n==S.vb})[0]||bs.filter(function(x){return x.vd==S.d})[0]||bs[0],v=S.V[b.n+'|'+S.d]||{};
+h+='<section><h3>Visit entry</h3><label>Branch office<select data-k="s:vb">'+bs.map(function(x){return'<option value="'+esc(x.n)+'"'+(x.n==b.n?' selected':'')+'>'+esc(x.n)+(x.vd==S.d?' (scheduled today)':'')+(S.V[x.n+'|'+S.d]?' - done':'')+'</option>'}).join('')+'</select></label>'+
+'<div class="g"><label>Arrival time'+inp('v:'+b.n+':arr',v.arr,'type="time"')+'</label><label>Departure time'+inp('v:'+b.n+':dep',v.dep,'type="time"')+'</label>'+
+'<label>Lead Register<select data-k="v:'+esc(b.n)+':lr"><option>Prepared</option><option'+(v.lr=='Not prepared'?' selected':'')+'>Not prepared</option><option'+(v.lr=='Nil'?' selected':'')+'>Nil</option></select></label><label>Leads in register (min '+S.ml+')'+inp('v:'+b.n+':ln',v.ln)+'</label>'+
+'<label style="grid-column:1/3">People met with BPM'+inp('v:'+b.n+':met',v.met)+'</label></div>'+
+'<h3 style="margin-top:8px">Achievement today</h3>'+catFields(b.n)+extra(b.n)+'<label>Remarks'+inp('v:'+b.n+':rm',v.rm,'type="text"')+'</label>'+
+'<div class="sm">BPM: '+esc(b.bpm)+' '+cl(b)+'</div>'+'<div class="sm ok" style="margin-top:6px">Entries save automatically.</div></section>';return h}
+
+/* ---------- daily ---------- */
+function vDaily(){var ot=mine().filter(function(b){return!S.V[b.n+'|'+S.d]}),h=ctx();
+if(!ot.length)return h+'<section>No BO to enter. Assign BOs to '+esc(S.me)+' in Setup.</section>';
+h+='<section><h3>Daily entry ('+ot.filter(function(b){return ent(b.n,S.d)}).length+'/'+ot.length+' done)</h3><div class="sm">BOs visited today are in the Visit tab.</div><div style="margin-top:8px">'+
+ot.map(function(b){return'<details'+(S.dop==b.n?' open':'')+'><summary>'+esc(b.n)+(ent(b.n,S.d)?' <span class="ok">&#10003;</span>':'')+'</summary><div class="sm">BPM: '+esc(b.bpm)+' '+cl(b)+'</div>'+catFields(b.n)+extra(b.n)+'</details>'}).join('')+'</div></section>';return h}
+
+/* ---------- reports ---------- */
+function pad(s,n,r){s=String(s);if(s.length>=n)return s;var p=Array(n-s.length+1).join(' ');return r?p+s:s+p}
+function cmp(n){n=Math.round(n||0);if(n>=1e7)return(n/1e7).toFixed(2).replace(/\.?0+$/,'')+'Cr';if(n>=1e5)return(n/1e5).toFixed(2).replace(/\.?0+$/,'')+'L';return fmt(n)}
+function cn(c){var m={'POSB Accounts':'POSB A/c','PLI/RPLI Premium':'PLI/RPLI','International Mail':'Int Mail'};return(m[c.n]||c.n).slice(0,10)}
+var LN='━━━━━━━━━━━━━━';
+function tb(cols,rows,w){var o=[pad('Category',10)+cols.map(function(c){return pad(c,w,1)}).join('')];rows.forEach(function(r){o.push(pad(r[0],10)+r.slice(1).map(function(v){return pad(v,w,1)}).join(''))});return'```\n'+o.join('\n')+'\n```'}
+var EQ='==========================',DL='--------------------------';
+function dms(s){var q=s.split('-');return q[2]+'/'+q[1]+'/'+q[0].slice(2)}
+function ck(n){n=Math.round(n||0);if(n>=1e7)return(n/1e7).toFixed(1).replace(/\.0$/,'')+'Cr';if(n>=1e5)return(n/1e5).toFixed(1).replace(/\.0$/,'')+'L';if(n>=1e4)return Math.round(n/1e3)+'K';if(n>=1000)return(n/1000).toFixed(1).replace(/\.0$/,'')+'K';return String(n)}
+function kv(k,v){return pad(k,13)+': '+v}
+function T2(h,rows,w,tot,lf){lf=lf||1;var f=function(r){return r.map(function(v,i){v=String(v);return i<lf?pad(v.slice(0,w[i]-1),w[i]):pad(v,w[i],1)}).join('')},n=w.reduce(function(a,b){return a+b},0),o=[f(h),Array(n+1).join('-')];rows.forEach(function(r){o.push(f(r))});if(tot){o.push(Array(n+1).join('-'));o.push(f(tot))}return o}
+function blk(t,L){return'*'+t+'*\n```\n'+L.join('\n')+'\n```'}
+function add(L,a){a.forEach(function(x){L.push(x)})}
+function rep1(){var vb=mine().filter(function(b){return S.V[b.n+'|'+S.d]}),p=P(S.d),L=[S.name,S.me+' | '+dm(S.d),EQ];
+if(!vb.length){L.push('No BO visited on this date.');return blk('DAILY VISIT REPORT',L)}
+vb.forEach(function(b,i){var v=S.V[b.n+'|'+S.d],e=ent(b.n,S.d)||{},m=agg([b.n],p.f,S.d),td=[],pr=[],tc=0,ta=0;
+S.cats.forEach(function(c){var x=cv(e,c.id),t=tgB(b,p,c.id),y=m.cats[c.id];if(x.c||x.a){td.push([cn(c),x.c,fmt(x.a)]);tc+=x.c;ta+=x.a}if(x.c||x.a||y.c||y.a||t.c||t.a)pr.push([cn(c),y.c+'/'+(t.c||'-'),ck(y.a)+'/'+(t.a?ck(t.a):'-')])});
+L.push('',(i+1)+'. '+b.n,DL,kv('BPM',b.bpm||'-'),kv('Arrival',v.arr||'-'),kv('Departure',v.dep||'-'),kv('Lead Register',v.lr||'Prepared'),kv('Leads ready',(v.ln||0)+'/'+S.ml),kv('Met with BPM',v.met||0),kv('Leads',(e.lg||0)+' gen, '+(e.lc||0)+' conv'),kv('Dak Sewa app',e.dk||0));
+if(v.rm)L.push(kv('Remarks',v.rm));
+L.push('','TODAY');add(L,T2(['Category','Count','Rs'],td.length?td:[['-','-','-']],[10,6,10],td.length?['Total',tc,fmt(ta)]:0));
+L.push('','PERIOD TOTAL / TARGET');add(L,T2(['Category','Count','Rs'],pr.length?pr:[['-','-','-']],[9,8,9]))});
+var a=agg(names(vb),S.d,S.d),dr=[],dc=0,da=0;S.cats.forEach(function(c){var x=a.cats[c.id];if(x.c||x.a){dr.push([cn(c),x.c,fmt(x.a)]);dc+=x.c;da+=x.a}});
+L.push('',EQ,'DAY TOTAL ('+vb.length+' BO)');add(L,T2(['Category','Count','Rs'],dr.length?dr:[['-','-','-']],[10,6,10],dr.length?['Total',dc,fmt(da)]:0));L.push(kv('Leads Conv',a.lc),kv('Dak Sewa app',a.dk));
+return blk('DAILY VISIT REPORT',L)}
+function rep2(){var all=mine(),vb=all.filter(function(b){return S.V[b.n+'|'+S.d]}),ot=all.filter(function(b){return!S.V[b.n+'|'+S.d]}),p=P(S.d),ns=names(ot),a=agg(ns,S.d,S.d),m=agg(ns,p.f,S.d),en=ot.filter(function(b){return ent(b.n,S.d)}),
+L=[S.name,S.me+' | '+dm(S.d),EQ,kv('Visited',names(vb).join(', ')||'None'),kv('Entries',en.length+'/'+ot.length+' BO')],td=[],pr=[],tc=0,ta=0;
+S.cats.forEach(function(c){var x=a.cats[c.id],y=m.cats[c.id],t=tsum(ot,p,c.id);if(x.c||x.a){td.push([cn(c),x.c,fmt(x.a)]);tc+=x.c;ta+=x.a}if(x.c||x.a||y.c||y.a||t.c||t.a)pr.push([cn(c),y.c+'/'+(t.c||'-'),ck(y.a)+'/'+(t.a?ck(t.a):'-')])});
+L.push('','TODAY');add(L,T2(['Category','Count','Rs'],td.length?td:[['-','-','-']],[10,6,10],td.length?['Total',tc,fmt(ta)]:0));
+L.push(kv('Leads',a.lg+' gen, '+a.lc+' conv'),kv('Dak Sewa app',a.dk),'','PERIOD TO DATE',dm(p.f)+' to '+dm(S.d));add(L,T2(['Category','Count','Rs'],pr.length?pr:[['-','-','-']],[9,8,9]));
+var rows=en.map(function(b){var e=ent(b.n,S.d),n=0,r=0;S.cats.forEach(function(c){var x=cv(e,c.id);n+=x.c;r+=x.a});return[b.n,n,ck(r),pc(sc([b],p).o)]});
+L.push('','BO-WISE (today)');add(L,T2(['BO','Nos','Rs','Score'],rows.length?rows:[['-','-','-','-']],[10,4,6,6]));
+var ms=ot.filter(function(b){return!ent(b.n,S.d)});if(ms.length)L.push('','NO ENTRY ('+ms.length+'):',names(ms).join(', '));
+return blk('OTHER BO REPORT',L)}
+function leadsOk(){var bad=mine().filter(function(b){var e=ent(b.n,S.d);return e&&(e.lc||0)>(e.lg||0)});if(bad.length){msg('Converted leads exceed generated leads in '+bad[0].n,1);return false}return true}
+function vReport(){return ctx()+'<section><h3>Report 1: daily visit report</h3><pre id="r1">'+esc(rep1())+'</pre><div class="g"><button class="b" onclick="wa(1)">Send as text</button><button class="b s" onclick="cp(1)">Copy text</button></div><button class="b" onclick="shareImg(1)">Share as image</button></section>'+
+'<section><h3>Report 2: other BO report</h3><pre id="r2">'+esc(rep2())+'</pre><div class="g"><button class="b" onclick="wa(2)">Send as text</button><button class="b s" onclick="cp(2)">Copy text</button></div><button class="b" onclick="shareImg(2)">Share as image</button></section>'+
+'<section><h3>Data file for the Inspector</h3><div class="sm">Send this file on WhatsApp after the text reports. The Inspector imports it in Dashboard.</div><button class="b" onclick="shareFile()">Share data file</button></section>'}
+function wa(n){if(!leadsOk())return;window.open('https://wa.me/?text='+encodeURIComponent($('r'+n).textContent),'_blank')}
+function cp(n){var t=$('r'+n).textContent;try{navigator.clipboard.writeText(t).then(function(){msg('Copied')},function(){msg('Copy not allowed here',1)})}catch(e){msg('Copy not allowed here',1)}}
+function shareFile(){if(!leadsOk())return;var o={v:1,sd:S.name,member:S.me,role:(S.mem.filter(function(m){return m.n==S.me})[0]||{}).r,date:S.d,cats:S.cats,E:{},V:{},B:{}};
+mine().forEach(function(b){var k=b.n+'|'+S.d;o.B[b.n]={so:b.so,bpm:b.bpm,mob:b.mob,ty:b.ty};if(S.E[k])o.E[b.n]=S.E[k];if(S.V[k])o.V[b.n]=S.V[k]});
+sendFile(o,S.me.replace(/\W/g,'')+'_'+S.d+'.json')}
+
+/* ---------- import + dashboard ---------- */
+function doImport(el){var fs=[].slice.call(el.files);if(!fs.length)return;var n=0,u=0,s=0,ok=0,bad=0,left=fs.length,log=[];
+fs.forEach(function(f){var r=new FileReader();r.onload=function(){try{var o=JSON.parse(r.result);if(!o.member||!o.date||!o.E)throw 0;
+if(!S.mem.some(function(m){return m.n==o.member}))S.mem.push({n:o.member,r:o.role||'MO'});
+(o.cats||[]).forEach(function(c){if(!S.cats.some(function(x){return x.id==c.id}))S.cats.push(c)});
+for(var b in o.B){var x=S.bos.filter(function(y){return y.n==b})[0];if(!x){S.bos.push({n:b,so:o.B[b].so,bpm:o.B[b].bpm,mob:o.B[b].mob,own:o.member,ty:o.B[b].ty,vd:''})}}
+function up(st,src){for(var b in src){var k=b+'|'+o.date,j=JSON.stringify(src[b]);if(!S.bos.some(function(y){return y.n==b})){S.bos.push({n:b,so:'',bpm:'',mob:'',own:o.member,ty:'M',vd:''})}
+if(!st[k]){n++}else if(JSON.stringify(st[k])!==j){u++}else{s++}st[k]=src[b]}}
+up(S.E,o.E);up(S.V,o.V||{});ok++;log.push(o.member+' '+dm(o.date))}catch(e){bad++}
+if(--left==0){S.imp.unshift(new Date().toLocaleString('en-GB')+': '+log.join(', ')+' ('+n+' new, '+u+' updated, '+s+' same)');S.imp=S.imp.slice(0,15);save();R();msg(ok+' file(s) imported: '+n+' new, '+u+' updated, '+s+' unchanged'+(bad?'. '+bad+' file(s) invalid.':''),bad&&!ok)}};r.readAsText(f)});el.value=''}
+function vDashOld(){var p=S.per[S.pi],all=names(S.bos),a=agg(all,p.f,p.t),n=all.length,h='';
+h+='<section><h3>Overview</h3><label>Period<select data-k="s:pi">'+S.per.map(function(x,i){return'<option value="'+i+'"'+(i==S.pi?' selected':'')+'>'+dm(x.f)+' to '+dm(x.t)+'</option>'}).join('')+'</select></label>';
+if(!n)h+='<div class="sm">Add BOs in Setup first.</div>';
+h+='<div class="cards">'+S.cats.map(function(c){var t=tgOf(p,c.id),x=a.cats[c.id];return'<div class="cd"><span class="sm">'+esc(c.n)+'</span><b>'+x.c+(t.c?' / '+t.c*n:'')+'</b><span class="sm">Rs '+fmt(x.a)+(t.a?' / '+fmt(t.a*n):'')+'</span></div>'}).join('')+
+'<div class="cd"><span class="sm">Leads converted</span><b>'+a.lc+' / '+a.lg+'</b><span class="sm">converted / generated</span></div><div class="cd"><span class="sm">Dak Sewa app</span><b>'+a.dk+'</b><span class="sm">customers</span></div></div></section>';
+var c=S.cats.filter(function(x){return x.id==S.dc})[0]||S.cats[0];
+if(c&&n){var t=tgOf(p,c.id),rows=S.bos.map(function(b){var x=agg([b.n],p.f,p.t).cats[c.id],pc=t.c?x.c/t.c:(t.a?x.a/t.a:0);return{b:b,x:x,pc:pc}}).sort(function(u,v){return u.pc-v.pc});
+h+='<section><h3>BO-wise progress</h3><label>Category<select data-k="s:dc">'+S.cats.map(function(x){return'<option value="'+x.id+'"'+(x.id==c.id?' selected':'')+'>'+esc(x.n)+'</option>'}).join('')+'</select></label><div class="sm">Lowest first. Target per BO: '+t.c+' nos, Rs '+fmt(t.a)+'</div>'+
+rows.map(function(r){var w=Math.min(100,r.pc*100);return'<div style="margin-top:8px"><div class="row"><span>'+esc(r.b.n)+' <span class="sm">'+esc(r.b.own)+'</span></span><span class="sm">'+r.x.c+' nos, Rs '+fmt(r.x.a)+' ('+Math.round(r.pc*100)+'%)</span></div><div class="bar'+(r.pc>=1?' done':'')+'"><i style="width:'+w+'%"></i></div></div>'}).join('')+'</section>'}
+var ms=S.bos.filter(function(b){return!ent(b.n,S.d)&&!S.V[b.n+'|'+S.d]});
+h+='<section><h3>Entry status for '+dm(S.d)+'</h3><label>Date<input type="date" data-k="s:d" value="'+S.d+'"></label><div class="sm">'+(n-ms.length)+' of '+n+' BO have an entry.</div>'+(ms.length?'<div class="er" style="margin-top:6px">Pending: '+esc(names(ms).join(', '))+'</div>':'')+'</section>';
+h+='<section><h3>Import team reports</h3><div class="sm">Select one or more data files received on WhatsApp. Importing the same file again does not double count.</div><input type="file" accept=".json,.txt,application/json,text/plain" multiple onchange="doImport(this)">'+
+(S.imp.length?'<div class="sm" style="margin-top:8px"><b>Import history</b><br>'+S.imp.map(esc).join('<br>')+'</div>':'')+'</section>';return h}
+
+/* ---------- part 2 ---------- */
+var TA=['Setup','Visit','Daily','Report','Dashboard','Data','How to Use'],TT=['Visit Plan','Visit','Daily','Report','Contact','Data','How to Use'];
+function tabs(){if(S.mode=='team')return TT;return S.ent?['Dashboard','Contact','Visit Plan','Setup','Visit','Daily','Report','Data','How to Use']:['Dashboard','Contact','Visit Plan','Setup','Data','How to Use']}
+function setMode(m){if(m=='admin'&&S.mode!='admin'&&!askPin())return;S.mode=m;tab=(m=='admin'&&!S.bos.length)?tabs().indexOf('Setup'):0;save();R()}
+function R(){$('sd').textContent=S.name;
+if(!S.mode){$('nav').innerHTML='';$('app').innerHTML='<section><h3>Who is using this phone?</h3><button class="b" onclick="setMode(\'admin\')">I am the Inspector (admin)</button><button class="b s" onclick="setMode(\'team\')">I am a team member (MO / ME / OA)</button></section>';return}
+var T=tabs();if(tab>=T.length)tab=0;
+$('nav').innerHTML=T.map(function(t,i){return'<button class="'+(i==tab?'on':'')+'" onclick="tab='+i+';R();scrollTo(0,0)">'+t+'</button>'}).join('');
+if(!S.me&&S.mem.length)S.me=S.mem[0].n;
+$('app').innerHTML=(T[tab]=='Visit Plan'?'':banner())+({'Visit Plan':vVisitPlan,Setup:vSetup,Visit:vVisit,Daily:vDaily,Report:vReport,Dashboard:vDash,Data:vData,Contact:vContact,'How to Use':vHelp})[T[tab]]()}
+function tgB(b,p,id){var d=tgOf(p,id),o=((b.tg||{})[S.per.indexOf(p)]||{})[id]||{};return{c:o.c!=null?o.c:d.c,a:o.a!=null?o.a:d.a}}
+function tsum(bs,p,id){var r={c:0,a:0};bs.forEach(function(b){var t=tgB(b,p,id);r.c+=t.c;r.a+=t.a});return r}
+function ctg(b){var o=(b.tg||{})[S.pi]||{};return'<details><summary class="sm">Custom target for this BO (this period)</summary><div class="sm">Leave blank to use the default target.</div>'+S.cats.map(function(c){var x=o[c.id]||{};return'<div class="g"><label>'+esc(c.n)+' count'+inp('bt:'+b.n+':'+c.id+':c',x.c)+'</label><label>Amount (Rs)'+inp('bt:'+b.n+':'+c.id+':a',x.a)+'</label></div>'}).join('')+'</details>'}
+function clp(b,rk,n){var m=ph(b);return m?'<a href="tel:'+m+'">Call</a> | <a href="https://wa.me/91'+m+'?text='+encodeURIComponent(prog(b,rk,n))+'" target="_blank" rel="noopener" data-b="'+esc(b.n)+'" onclick="mk2(this.dataset.b)">WhatsApp progress</a>':''}
+function ph(b){var q=String(b.mob==null?'':b.mob).split(/[,\/;|\n]+/)[0].replace(/\D/g,'');return q.length>=10?q.slice(-10):''}
+function cl(b){var m=ph(b);return m?'<a href="tel:'+m+'">Call</a> | <a href="https://wa.me/91'+m+'?text='+encodeURIComponent(cmsg(b))+'" target="_blank" rel="noopener">WhatsApp</a>':''}
+function dl(f){var a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=f.name;a.click()}
+function sendFile(o,fn){var js=JSON.stringify(o),f=new File([js],fn,{type:'application/json'}),tf=new File([js],fn.replace(/\.json$/,'.txt'),{type:'text/plain'}),go=function(x){navigator.share({files:[x],title:fn}).catch(function(e){if(e&&e.name!='AbortError'){dl(f);msg('Sharing failed. File downloaded instead; attach it in WhatsApp.')}})};
+if(navigator.canShare&&navigator.canShare({files:[f]}))go(f);else if(navigator.canShare&&navigator.canShare({files:[tf]}))go(tf);else{dl(f);msg('File downloaded. Attach it in WhatsApp.')}}
+function sendSetup(){sendFile({v:1,type:'setup',name:S.name,cats:S.cats,per:S.per,bos:S.bos,mem:S.mem,ml:S.ml,vt:S.vt,pk:S.pk||''},'Setup_'+S.name.replace(/\W/g,'')+'.json')}
+function rd(el,cb){var f=el.files[0];if(!f)return;var r=new FileReader();r.onload=function(){var j;try{j=JSON.parse(r.result)}catch(e){return msg('Invalid file',1)}cb(j)};r.readAsText(f);el.value=''}
+function impSetup(el){rd(el,applySetup)}
+function applySetup(j){if(j.type!='setup'||!j.bos||!j.cats||!j.per||!j.mem)return msg('This is not a setup file',1);if(!confirm('Replace BO list, team, categories and targets with this setup? Your entries stay.'))return;S.name=j.name;S.cats=j.cats;S.per=j.per;S.bos=j.bos;S.mem=j.mem;if(j.ml)S.ml=j.ml;if(j.vt)S.vt=j.vt;if('pk' in j)S.pk=j.pk||'';S.pi=0;if(!S.mem.some(function(m){return m.n==S.me}))S.me=S.mem[0]?S.mem[0].n:'';save();R();msg('Setup imported. Select your name in "I am".')}
+function copySetup(){var t=JSON.stringify({v:1,type:'setup',name:S.name,cats:S.cats,per:S.per,bos:S.bos,mem:S.mem,ml:S.ml,vt:S.vt,pk:S.pk||''});try{navigator.clipboard.writeText(t).then(function(){msg('Setup text copied. Paste it in WhatsApp.')},function(){msg('Copy not allowed here',1)})}catch(e){msg('Copy not allowed here',1)}}
+function impPaste(){var j;try{j=JSON.parse($('pst').value.trim())}catch(e){return msg('Invalid text',1)}applySetup(j)}
+function backup(){dl(new File([JSON.stringify(S)],'BO_Monitor_Backup_'+S.d+'.json',{type:'application/json'}))}
+function restore(el){rd(el,function(j){if(!j.cats||!j.bos||!j.per)return msg('This is not a backup file',1);if(!confirm('Replace all data on this phone with this backup?'))return;S=Object.assign(def(),j);save();R();msg('Backup restored')})}
+function vData(){var ad=S.mode!='team';return'<section><h3>Setup file</h3><div class="sm">'+(ad?'Send this file to the team. They import it once to get the BO list, owners, categories and targets.':'Import the setup file sent by the Inspector, then select your name in "I am".')+'</div>'+(ad?'<button class="b" onclick="sendSetup()">Share setup file</button><button class="b s" onclick="copySetup()">Copy setup as text</button>':'')+'<label>Import setup file<input type="file" accept=".json,.txt,application/json,text/plain" onchange="impSetup(this)"></label><label>Or paste setup text<textarea id="pst" rows="3"></textarea></label><button class="b s" onclick="impPaste()">Import pasted text</button></section>'+
+(ad?'':reqCorr())+'<section><h3>Backup</h3><button class="b s" onclick="backup()">Download backup</button><label>Restore backup<input type="file" accept=".json,.txt,application/json,text/plain" onchange="restore(this)"></label></section>'+
+(ad?pinSec():'')+'<section><h3>Clear data</h3><div class="sm">Use this after testing with dummy data. Download a backup first if you may need the data again.</div><button class="b s" onclick="clrEntries()">Clear entries, keep setup</button><button class="b s" style="color:var(--ac)" onclick="clrAll()">Reset everything</button></section>'+(ad?'<section><h3>Entry tabs</h3><div class="sm">Visit, Daily and Report tabs are for MO / ME / OA. They are hidden for the Inspector by default. Show them only if you must enter data for a team member or test the tool.</div><button class="b s" onclick="S.ent=!S.ent;save();tab=tabs().indexOf(\'Data\');R()">'+(S.ent?'Hide':'Show')+' Visit, Daily and Report tabs</button></section>':'')+'<section><h3>Mode</h3><div class="sm">Current: '+(ad?'Inspector (admin)':'Team member')+'</div><button class="b s" onclick="if(confirm(\'Switch mode on this phone?\')){S.mode=\'\';save();R()}">Switch mode</button></section>'}
+function xlsxOut(){if(typeof XLSX=='undefined')return msg('Excel writer did not load. Check internet and reload.',1);var p=S.per[S.pi],hd=['BO','SO','BPM','Mobile','Owner','Type'];S.cats.forEach(function(c){hd.push(c.n+' count','Target count',c.n+' amount','Target amount')});
+var rows=[hd];S.bos.forEach(function(b){var a=agg([b.n],p.f,p.t),r=[b.n,b.so,b.bpm,b.mob,b.own,b.ty=='V'?'Visit':'Monitor'];S.cats.forEach(function(c){var t=tgB(b,p,c.id),x=a.cats[c.id];r.push(x.c,t.c,x.a,t.a)});rows.push(r)});
+var k=XLSX.utils.book_new();XLSX.utils.book_append_sheet(k,XLSX.utils.aoa_to_sheet(rows),'Report');XLSX.writeFile(k,'BO_Report_'+p.f+'_to_'+p.t+'.xlsx')}
+function trend(c,p){var td=iso(new Date()),e=p.t<td?p.t:td,d=new Date(p.f+'T00:00:00'),v=[],all=names(S.bos),tc=c?tsum(S.bos,p,c.id).c>0:false;
+while(iso(d)<=e&&v.length<62){var g=agg(all,iso(d),iso(d)),x=c?g.cats[c.id]:{a:S.cats.reduce(function(s2,k){return s2+g.cats[k.id].a},0)};v.push(tc?x.c:x.a);d.setDate(d.getDate()+1)}
+var mx=Math.max.apply(null,v.concat(1)),w=300/Math.max(v.length,1);
+return'<svg viewBox="0 0 300 70" width="100%" role="img" aria-label="Daily trend">'+v.map(function(y,i){var h=y/mx*60;return'<rect x="'+(i*w+1)+'" y="'+(66-h)+'" width="'+Math.max(w-2,1)+'" height="'+h+'" fill="var(--ac)" rx="1"/>'}).join('')+'<line x1="0" y1="66.5" x2="300" y2="66.5" stroke="var(--ln)"/></svg><div class="sm">Daily '+(tc?'count':'amount')+' for '+(c?esc(c.n):'all categories')+' from '+dm(p.f)+'. Peak: '+fmt(mx)+'</div>'}
+function vDash(){var p=S.per[S.pi],all=names(S.bos),a=agg(all,p.f,p.t),n=all.length,h='',al=S.dc=='all'||!S.cats.some(function(x){return x.id==S.dc}),c=al?null:S.cats.filter(function(x){return x.id==S.dc})[0];
+var RKM={},RT2=S.bos.length;if(n)ranks().B.forEach(function(x){RKM[x.n]=x.rk});
+h+='<section><h3>Overview</h3><label>Period<select data-k="s:pi">'+S.per.map(function(x,i){return'<option value="'+i+'"'+(i==S.pi?' selected':'')+'>'+dm(x.f)+' to '+dm(x.t)+'</option>'}).join('')+'</select></label>'+(n?'':'<div class="sm">Add BOs in Setup first.</div>')+
+'<div class="cards">'+S.cats.map(function(k){var t=tsum(S.bos,p,k.id),x=a.cats[k.id];return'<div class="cd"><span class="sm">'+esc(k.n)+'</span><b>'+x.c+(t.c?' / '+t.c:'')+'</b><span class="sm">Rs '+fmt(x.a)+(t.a?' / '+fmt(t.a):'')+'</span></div>'}).join('')+
+'<div class="cd"><span class="sm">Leads converted</span><b>'+a.lc+' / '+a.lg+'</b><span class="sm">converted / generated</span></div><div class="cd"><span class="sm">Dak Sewa app</span><b>'+a.dk+'</b><span class="sm">customers</span></div></div><button class="b s" onclick="xlsxOut()">Download Excel report</button></section>';
+h+=vRank();
+var z=S.bos.filter(function(b){var q=agg([b.n],p.f,p.t);return!S.cats.some(function(k){return q.cats[k.id].c||q.cats[k.id].a})});
+if(z.length)h+='<section><h3 class="er">Zero activity ('+z.length+')</h3><div class="sm">No count or amount in any category this period.</div>'+z.map(function(b){return'<div class="row"><span>'+esc(b.n)+' <span class="sm">'+esc(b.own)+'</span></span><span class="sm">'+clp(b,RKM[b.n],RT2)+'</span></div>'}).join('')+'</section>';
+if(n&&S.cats.length){var rows=S.bos.map(function(b){var ag2=agg([b.n],p.f,p.t);if(al){var q=sc([b],p),tn=0,ta=0;S.cats.forEach(function(k){tn+=ag2.cats[k.id].c;ta+=ag2.cats[k.id].a});return{b:b,pc:q.o,s:q,tn:tn,ta:ta}}
+var x=ag2.cats[c.id],t=tgB(b,p,c.id);return{b:b,x:x,pc:t.c?x.c/t.c:(t.a?x.a/t.a:0)}});
+rows.slice().sort(function(u,v){return v.pc-u.pc}).forEach(function(r,i){r.rk=i+1});rows.sort(function(u,v){return u.pc-v.pc});
+h+='<section><h3>Trend, progress and rank</h3><label>Category<select data-k="s:dc"><option value="all"'+(al?' selected':'')+'>All categories (overall)</option>'+S.cats.map(function(x){return'<option value="'+x.id+'"'+(!al&&x.id==c.id?' selected':'')+'>'+esc(x.n)+'</option>'}).join('')+'</select></label>'+trend(c,p)+'<div class="sm" style="margin-top:8px">'+(al?'Overall score = average achievement across all categories, each capped at 100%. ':'')+'Lowest first. Rank 1 is the best.</div>'+
+rows.map(function(r){return'<div style="margin-top:8px"><div class="row"><span>#'+r.rk+' '+esc(r.b.n)+' <span class="sm">'+esc(r.b.own)+'</span></span><span class="sm">'+(al?r.tn+' nos, Rs '+fmt(r.ta):r.x.c+' nos, Rs '+fmt(r.x.a))+' ('+Math.round(r.pc*100)+'%)</span></div><div class="bar'+(r.pc>=1?' done':'')+'"><i style="width:'+Math.min(100,r.pc*100)+'%"></i></div>'+(al?'<div class="sm">'+r.s.cs.map(function(k){return esc(k.n)+' '+pc(k.p)}).join(' | ')+'</div>':'')+(r.pc<.5?'<div class="sm">'+clp(r.b,RKM[r.b.n],RT2)+'</div>':'')+'</div>'}).join('')+'</section>'}
+var ms=S.bos.filter(function(b){return!ent(b.n,S.d)&&!S.V[b.n+'|'+S.d]});
+h+='<section><h3>Entry status for '+dm(S.d)+'</h3><label>Date<input type="date" data-k="s:d" value="'+S.d+'"></label><div class="sm">'+(n-ms.length)+' of '+n+' BO have an entry.</div>'+(ms.length?'<div class="er" style="margin-top:6px">Pending: '+esc(names(ms).join(', '))+'</div>':'')+'</section>';
+h+='<section><h3>Import team reports</h3><div class="sm">Select one or more data files received on WhatsApp. Importing the same file again does not double count.</div><input type="file" accept=".json,.txt,application/json,text/plain" multiple onchange="doImport(this)">'+(S.imp.length?'<div class="sm" style="margin-top:8px"><b>Import history</b><br>'+S.imp.map(esc).join('<br>')+'</div>':'')+'</section>';return h}
+
+var DT='Dear {BPM}, this is {SENDER} from {SUBDIV}. Please send the daily report of {BO} BO for {DATE} (Mail, International Mail, POSB, PLI/RPLI, CCS, leads and Dak Sewa app) today. Thank you.';
+function cmsg(b){return(S.tpl||DT).replace(/\{BPM\}/g,b.bpm||'BPM').replace(/\{BO\}/g,b.n).replace(/\{DATE\}/g,dm(S.d)).replace(/\{SUBDIV\}/g,S.name).replace(/\{SENDER\}/g,S.mode=='team'?S.me:'the Inspector')}
+var DI='📌 *Instructions*\n1. Update the Lead Register every day and follow up pending leads.\n2. Focus first on the categories where the target is still left.\n3. Show the Dak Sewa app calculation / PDF to every customer.\n4. Send your daily report on time. Contact me if you need any help.';
+function fill(t,b){return t.replace(/\{BPM\}/g,b.bpm||'BPM').replace(/\{BO\}/g,b.n).replace(/\{DATE\}/g,dm(S.d)).replace(/\{SUBDIV\}/g,S.name).replace(/\{SENDER\}/g,S.mode=='team'?S.me:'the Inspector')}
+function prog(b,rk,n){var p=P(S.d),a=agg([b.n],p.f,p.t),left=Math.max(0,Math.round((new Date(p.t+'T00:00:00')-new Date(S.d+'T00:00:00'))/864e5)),cr=[],ar=[],need=[],s2=sc([b],p),
+L=[S.name,b.n+' BO',kv('BPM',b.bpm||'-'),'Period '+dms(p.f)+'-'+dms(p.t),kv('As on',dm(S.d)),EQ,'Dear '+(b.bpm||'BPM')+',','Your BO progress is below.'];
+S.cats.forEach(function(c){var t=tgB(b,p,c.id),x=a.cats[c.id];
+if(t.c>0){cr.push([cn(c),x.c,t.c,Math.max(0,t.c-x.c)]);if(left>0&&t.c>x.c){var rm=t.c-x.c;need.push(pad(cn(c),10)+pad(rm>=left?Math.ceil(rm/left)+' /day':'1 per '+Math.floor(left/rm)+' days',14,1))}}
+if(t.a>0)ar.push([cn(c),ck(x.a),ck(t.a),ck(Math.max(0,t.a-x.a))])});
+if(!cr.length&&!ar.length)L.push('','No target is set for this BO','in this period.');
+if(cr.length){L.push('','COUNT');add(L,T2(['Category','Done','Tgt','Left'],cr,[10,5,5,5]))}
+if(ar.length){L.push('','AMOUNT (Rs)');add(L,T2(['Category','Done','Tgt','Left'],ar,[10,5,5,5]))}
+L.push('',kv('Overall',pc(s2.o)));if(rk&&S.mode!='team')L.push(kv('Rank','#'+rk+' of '+n));
+L.push(kv('Leads',a.lg+' gen, '+a.lc+' conv'),kv('Dak Sewa app',a.dk),kv('Days left',left>0?left:'Period ended'));
+if(need.length){L.push('','REQUIRED PACE');add(L,need)}
+return blk('BO PROGRESS REPORT',L)+'\n\n'+fill(S.ins||DI,b)+'\n\nRegards,\n'+(S.mode=='team'?S.me:'Inspector')+', '+S.name}
+function mk2(n){S.rp=S.rp||{};S.rp[n+'|'+S.d]=1;save();setTimeout(R,400)}
+function mk(n){S.rm=S.rm||{};S.rm[n+'|'+S.d]=1;save();setTimeout(R,400)}
+function vContact(){var ad=S.mode!='team',own=ad?(S.co||'All'):S.me,bs=S.bos.filter(function(b){return own=='All'||b.own==own}),
+done=function(b){return!!(ent(b.n,S.d)||S.V[b.n+'|'+S.d])},pend=bs.filter(function(b){return!done(b)}),all=S.cf=='all',list=all?bs:pend,
+mo=function(sel){return S.mem.map(function(m){return'<option'+(m.n==sel?' selected':'')+'>'+esc(m.n)+'</option>'}).join('')};
+var RK={},RT=S.bos.length;if(list.length&&ad)ranks().B.forEach(function(x){RK[x.n]=x.rk});var h='<section><h3>Contact BOs</h3><div class="sm">Call a BPM or send a WhatsApp reminder for the daily report. WhatsApp opens with the message ready; tap Send there. WhatsApp cannot send to many BOs at once, so send one by one.</div><div class="g"><label>Date<input type="date" data-k="s:d" value="'+S.d+'"></label>'+
+(ad?'<label>Team member<select data-k="s:co"><option'+(own=='All'?' selected':'')+'>All</option>'+mo(own)+'</select></label>':'<label>I am<select data-k="s:me">'+(mo(S.me)||'<option>No team yet</option>')+'</select></label>')+
+'<label style="grid-column:1/-1">Show<select data-k="s:cf"><option value="pending"'+(all?'':' selected')+'>Pending entry only</option><option value="all"'+(all?' selected':'')+'>All BOs</option></select></label></div></section>';
+h+='<section><h3>Message</h3><textarea data-k="s:tpl" rows="4">'+esc(S.tpl||DT)+'</textarea><div class="sm">Use {BPM} {BO} {DATE} {SENDER} {SUBDIV}. They are filled for each BO.</div><button class="b s" onclick="S.tpl=DT;save();R()">Reset message</button></section>';
+h+='<section><h3>Instructions for the progress report</h3><textarea data-k="s:ins" rows="6">'+esc(S.ins||DI)+'</textarea><div class="sm">These lines are added at the end of every Progress message. The same placeholders work.</div><button class="b s" onclick="S.ins=DI;save();R()">Reset instructions</button>'+(list.length?'<div class="sm" style="margin-top:8px">Preview of the Progress message for '+esc(list[0].n)+':</div><pre>'+esc(prog(list[0],RK[list[0].n],RT))+'</pre>':'')+'</section><section><h3>'+list.length+(all?' BO':' pending BO')+' <span class="sm">('+pend.length+' of '+bs.length+' have no entry on '+dm(S.d)+')</span></h3>'+
+(list.length?list.map(function(b){var m=ph(b),k=b.n+'|'+S.d;
+return'<div style="border-top:1px solid var(--ln);padding:8px 0"><div class="row"><b>'+esc(b.n)+'</b><span class="sm '+(done(b)?'ok':'er')+'">'+(done(b)?'Entry done':'Pending')+(S.rm&&S.rm[k]?' | Reminded':'')+(S.rp&&S.rp[k]?' | Progress sent':'')+'</span></div><div class="sm">BPM: '+esc(b.bpm||'-')+(m?' | '+m:' | no mobile number')+(ad?' | '+esc(b.own):'')+'</div>'+
+(m?'<div style="margin-top:6px"><a class="lk" href="tel:'+m+'">Call</a><a class="lk s" target="_blank" data-b="'+esc(b.n)+'" href="https://wa.me/91'+m+'?text='+encodeURIComponent(cmsg(b))+'" onclick="mk(this.dataset.b)">Remind</a><a class="lk" target="_blank" data-b="'+esc(b.n)+'" href="https://wa.me/91'+m+'?text='+encodeURIComponent(prog(b,RK[b.n],RT))+'" onclick="mk2(this.dataset.b)">Progress</a></div>':'')+'</div>'}).join(''):'<div class="sm">Nothing to show. Add BOs in Setup, or every BO has an entry.</div>')+'</section>';return h}
+function sc(bs,pp){var p=pp||S.per[S.pi],a=agg(names(bs),p.f,p.t),cs=[];
+S.cats.forEach(function(c){var t=tsum(bs,p,c.id),x=a.cats[c.id],q=[];if(t.c>0)q.push(Math.min(1,x.c/t.c));if(t.a>0)q.push(Math.min(1,x.a/t.a));if(q.length)cs.push({n:cn(c),p:q.reduce(function(u,v){return u+v},0)/q.length})});
+return{o:cs.length?cs.reduce(function(u,v){return u+v.p},0)/cs.length:0,cs:cs}}
+function ranks(){var T=S.mem.map(function(m){var bs=S.bos.filter(function(b){return b.own==m.n});return bs.length?{n:m.n,r:m.r,k:bs.length,s:sc(bs)}:null}).filter(Boolean),B=S.bos.map(function(b){return{n:b.n,o:b.own,s:sc([b])}});
+[T,B].forEach(function(L){L.forEach(function(x){x.rk=1+L.filter(function(y){return y.s.o>x.s.o}).length});L.sort(function(u,v){return u.rk-v.rk})});return{T:T,B:B,p:S.per[S.pi]}}
+function pc(x){return Math.round(x*100)+'%'}
+function vRank(){if(!S.bos.length)return'';var r=ranks();
+if(!r.B[0].s.cs.length)return'<section><h3>Ranking</h3><div class="sm">Set targets for this period in Setup to see team and BO ranking.</div></section>';
+var h='<section><h3>Team ranking</h3><div class="sm">Score = average achievement against target across categories (each category capped at 100%). Period '+dm(r.p.f)+' to '+dm(r.p.t)+'.</div>'+
+r.T.map(function(x){return'<div style="margin-top:8px"><div class="row"><span>#'+x.rk+' '+esc(x.n)+' <span class="sm">'+x.r+', '+x.k+' BO</span></span><b>'+pc(x.s.o)+'</b></div><div class="bar'+(x.s.o>=1?' done':'')+'"><i style="width:'+Math.min(100,x.s.o*100)+'%"></i></div><div class="sm">'+x.s.cs.map(function(c){return esc(c.n)+' '+pc(c.p)}).join(' | ')+'</div></div>'}).join('')+'</section>';
+h+='<section><h3>BO ranking (overall)</h3><details><summary class="sm">Show all '+r.B.length+' BO, best to lowest</summary>'+r.B.map(function(x){return'<div style="margin-top:6px"><div class="row"><span>#'+x.rk+' '+esc(x.n)+' <span class="sm">'+esc(x.o)+'</span></span><span class="sm">'+pc(x.s.o)+'</span></div><div class="bar'+(x.s.o>=1?' done':'')+'"><i style="width:'+Math.min(100,x.s.o*100)+'%"></i></div></div>'}).join('')+'</details></section>';
+h+='<section><h3>Share ranking with the team</h3><label>Include<select data-k="s:rs"><option value="both"'+(S.rs=='team'?'':' selected')+'>Team ranking and all BO ranking</option><option value="team"'+(S.rs=='team'?' selected':'')+'>Team ranking only</option></select></label><pre id="rk">'+esc(rkText())+'</pre><div class="g"><button class="b" onclick="waRk()">Send as text</button><button class="b s" onclick="cpRk()">Copy text</button></div><button class="b" onclick="shareImg(3)">Share as image</button></section>';return h}
+function rkText(){var r=ranks(),T=r.T,B=r.B,L=[S.name,'Period '+dms(r.p.f)+'-'+dms(r.p.t),EQ,'TEAM RANKING'];
+add(L,T2(['#','Name','BOs','Score'],T.map(function(x){return[x.rk,x.n,x.k,pc(x.s.o)]}),[3,11,5,7],0,2));
+if(T.length)L.push('Top: '+T[0].n+' ('+pc(T[0].s.o)+')');
+if(S.rs!='team'){L.push('',EQ,'BO RANKING');add(L,T2(['#','BO','Owner','Score'],B.map(function(x){return[x.rk,x.n,String(x.o),pc(x.s.o)]}),[3,10,7,6],0,3));
+if(B.length>5)L.push('','Top BOs: '+B.slice(0,3).map(function(x){return x.n}).join(', '),'Need attention: '+B.slice(-3).map(function(x){return x.n}).join(', '))}
+return blk('PERFORMANCE RANKING',L)+'\n\n_Score = average achievement against target across categories, each capped at 100%._'}
+function waRk(){window.open('https://wa.me/?text='+encodeURIComponent($('rk').textContent),'_blank')}
+function cpRk(){var t=$('rk').textContent;try{navigator.clipboard.writeText(t).then(function(){msg('Copied')},function(){msg('Copy not allowed here',1)})}catch(e){msg('Copy not allowed here',1)}}
+function imgOf(title,body){var L=body.split('\n'),fs=30,lh=44,px=32,F='ui-monospace,Menlo,Consolas,"Courier New",monospace',c=document.createElement('canvas'),x=c.getContext('2d');
+x.font=fs+'px '+F;var cw=x.measureText('M').width,mx=Math.max.apply(null,L.map(function(l){return l.length}).concat(30)),W=Math.ceil(mx*cw+px*2),tb=100,H=tb+40,rows=[];
+var isR=function(l){return/^-{20,}$/.test(l)},isE=function(l){return/^={20,}$/.test(l)},hd=/^(TODAY|PERIOD|DAY TOTAL|COUNT|AMOUNT|BO-WISE|TEAM RANKING|BO RANKING|REQUIRED PACE|NO ENTRY)/,tw=0,inT=false,nr=0,tot=false;
+L.forEach(function(l,i){var k,h=lh;
+if(l===''){k='gap';h=lh/2;inT=false}
+else if(isE(l)){k='eq';h=22;inT=false}
+else if(isR(l)){k='rule';h=16;if(inT&&nr>0)tot=true}
+else if(!inT&&i+1<L.length&&isR(L[i+1])&&!/^\d+\. /.test(l)){k='th';tw=L[i+1].length;inT=true;nr=0;tot=false}
+else if(inT&&l.length==tw){if(tot){k='tot';inT=false;tot=false}else{k='tr';nr++}}
+else{inT=false;k=hd.test(l)?'h':(/^\d+\. /.test(l)?'bo':(l.charAt(13)==':'?'kv':'p'))}
+rows.push({l:l,k:k,h:h,z:nr});H+=h});
+c.width=W;c.height=H;x.fillStyle='#fff';x.fillRect(0,0,W,H);x.fillStyle='#b3261e';x.fillRect(0,0,W,tb);x.textBaseline='middle';x.fillStyle='#fff';x.font='bold '+(fs+4)+'px '+F;x.fillText(title,px,tb/2);
+var y=tb+20,bx=px-10,bw=W-2*px+20;
+rows.forEach(function(r){var m=y+r.h/2;
+if(r.k=='eq'){x.fillStyle='#b3261e';x.fillRect(px,y+9,W-2*px,4)}
+else if(r.k=='rule'){x.fillStyle='#cfc9bf';x.fillRect(px,y+7,W-2*px,2)}
+else if(r.k!='gap'){
+if(r.k=='th'){x.fillStyle='#f3e1df';x.fillRect(bx,y,bw,r.h)}
+else if(r.k=='tr'&&r.z%2==0){x.fillStyle='#faf6f5';x.fillRect(bx,y,bw,r.h)}
+else if(r.k=='tot'){x.fillStyle='#ece8e1';x.fillRect(bx,y,bw,r.h)}
+else if(r.k=='bo'){x.fillStyle='#fbeceb';x.fillRect(bx,y,bw,r.h)}
+x.font=((r.k=='th'||r.k=='tot'||r.k=='h'||r.k=='bo')?'bold ':'')+fs+'px '+F;
+if(r.k=='kv'){x.fillStyle='#6b6f76';x.fillText(r.l.slice(0,13),px,m);x.fillStyle='#1f2328';x.fillText(r.l.slice(13),px+13*cw,m)}
+else{x.fillStyle=(r.k=='h'||r.k=='bo')?'#b3261e':'#1f2328';x.fillText(r.l,px,m)}}
+y+=r.h});return c}
+function shareImg(k){if(k<3&&!leadsOk())return;var t=(k==1?rep1:k==2?rep2:rkText)(),m=t.match(/^\*(.+?)\*/),b=t.split('```')[1];if(!m||!b)return msg('Nothing to share',1);
+var c=imgOf(m[1],b.replace(/^\n|\n$/g,'')),nm=m[1].replace(/\W+/g,'_')+'_'+S.d+'.png';
+c.toBlob(function(bl){var f=new File([bl],nm,{type:'image/png'});if(navigator.canShare&&navigator.canShare({files:[f]}))navigator.share({files:[f],title:m[1]}).catch(function(e){if(e&&e.name!='AbortError'){dl(f);msg('Sharing failed. Image downloaded; attach it in WhatsApp.')}});else{dl(f);msg('Image downloaded. Attach it in WhatsApp.')}},'image/png')}
+function vdt(d){return new Date(d+'T00:00:00').toLocaleDateString('en-GB',{weekday:'short'})+' '+dms(d)}
+var DV='Dear {BPM}, {VISITOR} will visit your BO on {DATE}. Before the visit please:\n1. Visit schools, government offices, anganwadis, shops and village households.\n2. Keep at least {MIN} leads ready.\n3. Enter every lead in the Lead Register.\nPlease confirm. Thank you.';
+function vmsg(b,d){var L=[S.name,EQ,kv('BO',b.n),kv('Visit date',vdt(d)),kv('Visit by',b.own||'-'),kv('Min leads',S.ml)];
+return blk('VISIT NOTICE',L)+'\n\n'+(S.vt||DV).replace(/\{BPM\}/g,b.bpm||'BPM').replace(/\{BO\}/g,b.n).replace(/\{DATE\}/g,vdt(d)).replace(/\{MIN\}/g,S.ml).replace(/\{VISITOR\}/g,b.own||'the MO').replace(/\{SUBDIV\}/g,S.name)}
+function mk3(n,d){S.vn=S.vn||{};S.vn[n+'|'+d]=1;save();setTimeout(R,400)}
+function banner(){if(S.mode!='team'||!S.me)return'';var t=iso(new Date()),d=new Date(t+'T00:00:00'),bk=new Date(t+'T00:00:00'),a=0,c=0,m=0;d.setDate(d.getDate()+1);bk.setDate(bk.getDate()-30);var t1=iso(d),b30=iso(bk);
+S.bos.forEach(function(b){if(b.own!=S.me||b.ty!='V'||!b.vd)return;if(b.vd==t){if(!S.V[b.n+'|'+t])a++}else if(b.vd==t1)c++;else if(b.vd<t&&b.vd>=b30&&!S.V[b.n+'|'+b.vd])m++});
+if(!a&&!c&&!m)return'';return'<section style="border-color:var(--ac)"><b>Visit alert</b><div class="sm">'+(a?'Today: '+a+' BO. ':'')+(c?'Tomorrow: '+c+' BO. ':'')+(m?'Missed: '+m+' BO. ':'')+'Open Visit Plan and send the notice to the BPM.</div></section>'}
+function vVisitPlan(){var ad=S.mode!='team',own=ad?(S.co||'All'):S.me,t0=iso(new Date()),w=parseInt(S.vw,10)||3,dts=[],d0=new Date(t0+'T00:00:00'),bk=new Date(t0+'T00:00:00'),i;bk.setDate(bk.getDate()-30);var b30=iso(bk);
+for(i=0;i<=w;i++){dts.push(iso(d0));d0.setDate(d0.getDate()+1)}
+var vb=S.bos.filter(function(b){return b.ty=='V'&&b.vd&&(own=='All'||b.own==own)}),mo=S.mem.map(function(m){return'<option'+(m.n==own?' selected':'')+'>'+esc(m.n)+'</option>'}).join(''),
+h='<section><h3>Visit Plan</h3><div class="sm">Visits in the next '+w+' days. Send the notice to the BPM so the leads are ready before the visit.</div><div class="g">'+
+(ad?'<label>Team member<select data-k="s:co"><option'+(own=='All'?' selected':'')+'>All</option>'+mo+'</select></label>':'<label>I am<select data-k="s:me">'+(mo||'<option>No team yet</option>')+'</select></label>')+
+'<label>Days ahead<select data-k="s:vw">'+[1,2,3,4,5,6,7].map(function(n){return'<option'+(n==w?' selected':'')+'>'+n+'</option>'}).join('')+'</select></label></div></section>';
+var row=function(b,d,late){var m=ph(b),dn=!!S.V[b.n+'|'+d],sent=S.vn&&S.vn[b.n+'|'+d];
+return'<div style="border-top:1px solid var(--ln);padding:8px 0"><div class="row"><b>'+esc(b.n)+'</b><span class="sm '+(dn||(sent&&!late)?'ok':'er')+'">'+(dn?'Visit done':late?'Missed':(sent?'Notice sent':'Notice not sent'))+'</span></div><div class="sm">BPM: '+esc(b.bpm||'-')+(m?' | '+m:' | no mobile number')+(ad?' | '+esc(b.own):'')+(late?' | was '+vdt(d):'')+'</div>'+
+(m&&!dn?'<div style="margin-top:6px"><a class="lk" href="tel:'+m+'">Call</a>'+(late?'':'<a class="lk s" target="_blank" rel="noopener" data-b="'+esc(b.n)+'" data-d="'+d+'" href="https://wa.me/91'+m+'?text='+encodeURIComponent(vmsg(b,d))+'" onclick="mk3(this.dataset.b,this.dataset.d)">WhatsApp notice</a>')+'</div>':'')+'</div>'};
+dts.forEach(function(d,i){var bs=vb.filter(function(b){return b.vd==d});h+='<section><h3>'+(i==0?'Today':i==1?'Tomorrow':'In '+i+' days')+' <span class="sm">'+vdt(d)+'</span></h3>'+(bs.length?bs.map(function(b){return row(b,d,false)}).join(''):'<div class="sm">No visit scheduled.</div>')+'</section>'});
+var ms=vb.filter(function(b){return b.vd<t0&&b.vd>=b30&&!S.V[b.n+'|'+b.vd]}).sort(function(x,y){return x.vd<y.vd?-1:1});
+if(ms.length)h+='<section><h3 class="er">Missed / pending ('+ms.length+')</h3><div class="sm">The visit date has passed but there is no visit entry. Visit it, or have the date changed.</div>'+ms.map(function(b){return row(b,b.vd,true)}).join('')+'</section>';
+h+='<section><h3>Notice message</h3><textarea data-k="s:vt" rows="6">'+esc(S.vt||DV)+'</textarea><div class="sm">Use {BPM} {BO} {DATE} {MIN} {VISITOR} {SUBDIV}. A small block with BO, visit date, visit by and min leads is added above it automatically.</div><button class="b s" onclick="S.vt=DV;save();R()">Reset message</button></section>';return h}
+function vSched(){var bs=S.bos.filter(function(b){return b.ty=='V'}).sort(function(x,y){return(x.own||'').localeCompare(y.own||'')||(x.vd||'9').localeCompare(y.vd||'9')});
+return'<section><h3>Visit schedule ('+bs.length+' visit BO)</h3><div class="sm">Set the visit date of every Visit BO here, then share the setup file so each MO gets the dates.</div>'+(bs.length?bs.map(function(b){return'<div class="row" style="margin-top:6px"><span>'+esc(b.n)+' <span class="sm">'+esc(b.own)+'</span></span><input type="date" style="width:auto" data-k="bo:'+esc(b.n)+':vd" value="'+(b.vd||'')+'"></div>'}).join(''):'<div class="sm">No Visit BO yet. Set the BO type to Visit in the BO list above.</div>')+'</section>'}
+function bed(b){var n=esc(b.n);return'<details><summary class="sm">Edit BO details (name, SO, BPM, mobile)</summary><label>BO name<input type="text" value="'+n+'" data-old="'+n+'" onchange="renameBo(this)"></label><div class="g"><label>BPM name'+inp('bo:'+b.n+':bpm',b.bpm,'type="text"')+'</label><label>BPM mobile'+inp('bo:'+b.n+':mob',b.mob,'type="tel"')+'</label></div><label>SO / HO name'+inp('bo:'+b.n+':so',b.so,'type="text"')+'</label></details>'}
+function reqCorr(){var bs=mine();return'<section><h3>Request BO correction</h3><div class="sm">Only the Inspector can change BO details. Use this to send the correction to the Inspector on WhatsApp.</div>'+(bs.length?'<label>BO<select id="rcb">'+bs.map(function(b){return'<option>'+esc(b.n)+'</option>'}).join('')+'</select></label><label>What to correct<select id="rcf"><option>BPM name</option><option>BPM mobile</option><option>SO name</option><option>BO name</option><option>Other</option></select></label><label>Correct value / details<input id="rcv" type="text"></label><button class="b" onclick="sendCorr()">Send to Inspector on WhatsApp</button>':'<div class="sm">No BO assigned. Import the setup file and select your name first.</div>')+'</section>'}
+function sendCorr(){var n=$('rcb').value,f=$('rcf').value,v=$('rcv').value.trim(),b=S.bos.filter(function(x){return x.n==n})[0];if(!b)return;if(!v)return msg('Enter the correct value',1);
+var cur=f=='BPM name'?b.bpm:f=='BPM mobile'?b.mob:f=='SO name'?b.so:f=='BO name'?b.n:'-';
+window.open('https://wa.me/?text='+encodeURIComponent(blk('BO CORRECTION REQUEST',[S.name,EQ,kv('From',S.me),kv('BO',n),kv('Correct',f),kv('Now',cur||'-'),kv('Should be',v)])),'_blank')}
+function hp(s){var h=5381;for(var i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))|0;return String(h)}
+function askPin(){if(!S.pk)return true;var t=prompt('Enter the Inspector PIN');if(t===null)return false;if(hp('bom'+t.trim())==S.pk)return true;msg('Wrong PIN',1);return false}
+function setPin(){if(S.pk&&!askPin())return;var t=prompt('Set a new Inspector PIN (4 to 8 digits). Leave empty to remove the PIN.');if(t===null)return;t=t.trim();if(!t){S.pk='';save();R();msg('PIN removed. Share the setup file again.');return}if(!/^\d{4,8}$/.test(t))return msg('PIN must be 4 to 8 digits',1);S.pk=hp('bom'+t);save();R();msg('PIN set. Share the setup file again so team phones get it.')}
+function pinSec(){return'<section><h3>Inspector PIN</h3><div class="sm">Optional. When a PIN is set, a phone needs it to switch into Inspector mode, so a team member cannot open Setup. It is a deterrent, not strong security. Share the setup file after setting it.</div><button class="b s" onclick="setPin()">'+(S.pk?'Change or remove PIN':'Set PIN')+'</button></section>'}
+function renameBo(el){var o=el.dataset.old,n=el.value.trim().toUpperCase(),b=S.bos.filter(function(x){return x.n==o})[0];
+if(!b||!n||n==o){el.value=o;return}
+if(S.bos.some(function(x){return x.n==n})){msg('Another BO already has this name',1);el.value=o;return}
+if(!confirm('Rename '+o+' to '+n+'? Saved entries of this BO move to the new name.')){el.value=o;return}
+[S.E,S.V,S.vn,S.rm,S.rp].forEach(function(m){if(!m)return;Object.keys(m).forEach(function(k){if(k.indexOf(o+'|')==0){m[n+'|'+k.slice(o.length+1)]=m[k];delete m[k]}})});
+b.n=n;save();R();msg('Renamed. Share the setup file again so the team gets the new name.')}
+function clrEntries(){if(!confirm('Delete all daily entries, visit records, imported reports and the notice / reminder marks? Your BO list, team, categories, targets and visit dates stay. This cannot be undone.'))return;S.E={};S.V={};S.imp=[];S.vn={};S.rm={};S.rp={};S.vb='';S.dop='';save();R();msg('Entries cleared. Setup is kept.')}
+function clrAll(){var t=prompt('This deletes EVERYTHING on this phone: BO list, team, categories, targets and all entries. Type RESET to confirm.');if(t!=='RESET'){if(t!==null)msg('Nothing was deleted. You must type RESET.',1);return}var m=S.mode;S=def();S.mode=m;save();tab=0;if(m!='team')tab=tabs().indexOf('Setup');R();msg('All data cleared')}
+function hs(t,b,o){return'<details'+(o?' open':'')+'><summary>'+t+'</summary><div style="margin-top:6px">'+b+'</div></details>'}
+function ol(a){return'<ol style="margin:6px 0 0;padding-left:20px">'+a.map(function(x){return'<li style="margin-bottom:4px">'+x+'</li>'}).join('')+'</ol>'}
+function ul(a){return'<ul style="margin:6px 0 0;padding-left:20px">'+a.map(function(x){return'<li style="margin-bottom:4px">'+x+'</li>'}).join('')+'</ul>'}
+function vHelp(){var ad=S.mode!='team',h='<section><h3>How to use BO Target Monitor</h3><div class="sm">Track daily and period-wise targets of every Branch Office, collect reports from MO / ME / OA, and see progress on one dashboard. You are using the '+(ad?'<b>Inspector (admin)</b>':'<b>Team member</b>')+' view.</div></section>';
+h+='<section>';
+if(ad){h+=hs('Quick start for the Inspector (admin)',ol(['Open the file and choose <b>I am the Inspector</b>.','<b>Setup:</b> enter the sub division name, add the team (MO / ME / OA), check the categories, set the target period and the target per BO.','<b>Setup:</b> import the BO list from Excel (or add BOs manually). Then, inside "BO list", set the Owner, the Type (Visit or Monitor) and the Visit date of every BO.','<b>Data:</b> tap Share setup file and send it to the team on WhatsApp.','Every evening, read the two text reports in the WhatsApp group. Save the data files the team sends.','<b>Dashboard:</b> import all data files together under "Import team reports". The dashboard updates at once.']),1)}
+else{h+=hs('Quick start for MO / ME / OA',ol(['Open the file and choose <b>I am a team member</b>.','<b>Data:</b> import the setup file sent by the Inspector. Then select your name in <b>I am</b> at the top of the Visit, Daily and Report tabs.','On a visit day, MO enters the visited BO in the <b>Visit</b> tab.','Enter every other BO of yours in the <b>Daily</b> tab.','<b>Report:</b> send Report 1 and Report 2 on WhatsApp, then tap Share data file and send that file to the Inspector.']),1)}
+h+=hs('Daily routine, step by step',ol(['Select your name in <b>I am</b> and set the correct <b>Date</b>.','MO: on the day of visit, fill the Visit tab for each BO visited.','Everyone: fill the Daily tab for the remaining BOs (a tick appears when a BO has an entry).','Open the Report tab and check both reports.','Send Report 1 and Report 2 on WhatsApp, then share the data file.','If a number was wrong, correct it and send the reports and the data file again.']));
+h+=hs('Visit tab (for MO)',ul(['Choose the BO. BOs scheduled for the selected date are marked "scheduled today".','Enter arrival time and departure time manually.','Lead Register: Prepared, Not prepared or Nil, and the number of leads entered in the register.','People met with BPM: enter only the number.','Enter the achievement of every category (count and amount), leads generated, leads converted and Dak Sewa app customers.','Add remarks if needed. Use the Call or WhatsApp link to contact the BPM.','Entries save automatically.']));
+h+=hs('Daily tab (for MO, ME and OA)',ul(['Shows all your BOs that were not visited on the selected date.','Tap a BO to open it, then enter category-wise count and amount, leads generated, leads converted and Dak Sewa app.','A tick means that BO has an entry for the date.','ME and OA use this tab for the BOs they monitor every day.']));
+h+=hs('Report tab and WhatsApp sharing',ul(['<b>Report 1: daily visit report.</b> For each visited BO: arrival and departure time, Lead Register status, people met with BPM, leads, category achievement with period total against target, and Dak Sewa app. It ends with a day total.','<b>Report 2: other BO report.</b> For your BOs that were not visited: entries received, today\'s totals, period-to-date against target, BO-wise achievement and the BOs with no entry.','<b>Send as text</b> opens WhatsApp with the report text ready. Choose the group or the Inspector. <b>Copy text</b> copies it.','<b>Share as image</b> turns the same report into a clean picture with a proper table, so the alignment is perfect on every phone. Your phone\'s share sheet opens; choose WhatsApp and then the chat yourself. If sharing is not available, the image is downloaded and you attach it in WhatsApp. Use text when you want the BPM\'s chat to open directly, and image when the table must look clean.','<b>Share data file</b> sends a small file the Inspector imports into the dashboard. On phones that do not support direct sharing, the file downloads; attach it in WhatsApp manually.','Converted leads cannot be more than generated leads. The tool blocks the report until this is corrected.']));
+if(ad){h+=hs('Setup tab (Inspector)',ul(['<b>Team:</b> add MO, ME and OA names.','<b>Categories:</b> default are Mail, International Mail, POSB Accounts, PLI/RPLI Premium and CCS. Rename, add or remove any category. Every category tracks Count and Amount.','<b>Target period:</b> set From and To dates (for example 01/10/2026 to 31/10/2026) and the target per BO for each category. Use "Add new period" for the next month or a special drive.','<b>BO import:</b> upload Excel with the columns Name of HO/SO, Name of BO, Name of BPM and Mobile Number. Optional columns: Assigned To, Type (V or M) and Visit Date (DD/MM/YYYY). Use "Download Excel template" for the exact format.','<b>BO list:</b> set Owner, Type (Visit or Monitor) and Visit date. "Custom target" gives one BO a different target for the selected period; leave it blank to use the default.','Switching to a new sub division: use a fresh Excel and new targets, or restore a setup file.']));
+h+=hs('Dashboard tab (Inspector)',ul(['<b>Overview:</b> period-wise target against achievement for every category (count and amount), plus leads and Dak Sewa app totals.','<b>Zero activity:</b> BOs with no entry at all in the period, with Call and WhatsApp links. The WhatsApp link sends that BO its progress report (with rank and your instructions), the same as the Progress button in the Contact tab. BOs below 50% in the progress list have the same links.','<b>Trend:</b> daily chart of the selected category.','<b>Progress and rank:</b> every BO with percentage, a progress bar and rank (#1 is best). The lowest percentage is listed first. Choose <b>All categories (overall)</b> to see each BO\'s overall score with the category-wise % below it, or pick one category.','<b>Entry status:</b> pick a date to see which BOs have no entry.','<b>Import team reports:</b> select one or more data files together. Importing the same file again does not double count; a corrected file replaces the old numbers. Import history shows what came in.','<b>Download Excel report</b> gives BO-wise achievement and target for the period. For a PDF, use your browser\'s Print option.']))}
+if(ad)h+=hs('Ranking and sharing with the team',ul(['<b>Team ranking:</b> MO, ME and OA ranked by overall score, with category-wise % under each name.','<b>BO ranking:</b> every BO ranked by overall score, best to lowest.','<b>Score</b> = average achievement against target across the categories that have a target (count and amount), each category capped at 100%. It uses the period selected at the top of the Dashboard.','<b>Share ranking with the team:</b> choose Team ranking only, or Team and all BO ranking. Tap Send on WhatsApp to post it in the team group, or Copy.','Ranking needs targets for the period in Setup. Without targets every score is 0.']));
+h+=hs('Correcting BO details',ul(['<b>Inspector:</b> Setup, then BO list, then open a BO and tap <b>Edit BO details</b>. You can change the BO name, SO, BPM name and BPM mobile. Then share the setup file again so the team gets the corrections.','Renaming a BO moves its saved entries, visit records and reminders to the new name. After renaming, ask the team to import the new setup file before they send new data files; an older data file would bring back the old name.','<b>Team:</b> cannot change BO details. In the Data tab use <b>Request BO correction</b> to send the BO, the field and the correct value to the Inspector on WhatsApp. The Inspector makes the change and shares a new setup file.','The mobile number is used for Call and WhatsApp. Enter 10 digits. If a cell has two numbers, the first one is used.']));
+h+=hs('Visit Plan (advance notice to the BPM)',ul(['The Inspector gives each MO the visit dates in advance: Setup, <b>Visit schedule</b>. Then share the setup file again so the MO receives the dates (whenever a date changes, share the setup file again).','MO opens <b>Visit Plan</b> to see the visits of today and the next days (change "Days ahead" from 1 to 7).','For each BO tap <b>Call</b>, or <b>WhatsApp notice</b>. The message tells the BPM the visit date and asks to visit schools, government offices, anganwadis, shops and village households, keep the minimum leads ready (default 15) and enter them in the Lead Register. You can edit the message.','A BO changes to "Notice sent" after you send the notice. "Visit done" appears when the visit entry is saved.','BOs whose visit date has passed without a visit entry show under <b>Missed / pending</b>.','Team members see a <b>Visit alert</b> at the top when a visit is due today or tomorrow, or missed.','The Visit tab shows the minimum leads next to the Lead Register field, and the Visit Report shows "Leads ready 14/15".','The Inspector can set the minimum leads in Setup.']));
+h+=hs('Contact tab (call and WhatsApp the BOs)',ul(['Pick the date and see which BOs have not sent an entry yet. Choose "All BOs" to see everyone.','Tap <b>Call</b> to phone the BPM directly.','Tap <b>Remind</b> to open a WhatsApp chat with the BPM with the reminder message already typed. Tap <b>Progress</b> to send that BO its own progress report (done, target and left for every category, overall score and daily need; the message sent by the Inspector also shows the rank) followed by your ready-made instructions, which you can edit. Check it and tap Send in WhatsApp. The BO is then marked "Reminded" for that date.','You can edit the message once. {BPM}, {BO}, {DATE}, {SENDER} and {SUBDIV} are replaced for each BO. "Reset message" restores the default.','The Inspector can filter by team member. A team member sees only their own BOs.','The BO mobile numbers come from the BO Excel or from the BO added in Setup. WhatsApp uses +91 (India).']));
+h+=hs('Data tab',ul([ad?'<b>Share setup file:</b> sends the BO list, owners, categories, targets and team to the team. If sharing does not open or the file does not download, tap Copy setup as text, paste it in WhatsApp, and ask the team to paste it under Data, Import pasted text.':'<b>Import setup file:</b> loads the Inspector\'s setup. Your entries stay.','<b>Backup:</b> downloads all data of this phone. <b>Restore</b> loads a backup file and replaces the current data.','<b>Clear data:</b> "Clear entries, keep setup" deletes the daily entries, visit records, imported reports and notice marks but keeps the BO list, team, categories, targets and visit dates. Use it after testing. "Reset everything" deletes all data on this phone and asks you to type RESET first.','<b>Entry tabs (Inspector only):</b> Visit, Daily and Report tabs are hidden for the Inspector because they are for MO / ME / OA. Use "Show Visit, Daily and Report tabs" only to enter data for a team member whose file has not arrived, or to test the tool. Re-entering the same BO and date is safe: the later imported file replaces it.','<b>Inspector PIN:</b> optional. When set, a phone needs the PIN to switch into Inspector mode, so a team member cannot open Setup. Share the setup file after setting it so team phones get the PIN. It is a deterrent, not strong security.','<b>Switch mode:</b> changes this phone between Inspector and Team.']));
+h+=hs('Important points',ul(['Data is saved only in the browser of this phone. There is no automatic sync, so the dashboard shows only what was imported into that phone.','Do not clear browser data. Download a backup regularly.','Use the same browser and the same file every time.','Entering the same BO and date again overwrites the old entry. It never adds twice.','A BO visited on a date appears in the Visit tab and Report 1; all other BOs appear in the Daily tab and Report 2.','After the first open the tool also works without internet. Internet is needed only for WhatsApp and to get updates.']));
+return h+'</section>'}
+
+/* ---------- input handler ---------- */
+document.addEventListener('change',function(ev){var el=ev.target,k=el.dataset&&el.dataset.k;if(!k)return;var q=k.split(':'),t=q[0],v=el.type=='number'?(parseFloat(el.value)||0):el.value;
+if(t=='s'){S[q[1]]=q[1]=='pi'?+v:v;if(q[1]=='me')S.vb='';save();R();return}
+if(t=='g')S[q[1]]=v;
+else if(t=='cat')S.cats.filter(function(c){return c.id==q[1]})[0].n=v;
+else if(t=='per')S.per[S.pi][q[1]]=v;
+else if(t=='tg'){var p=S.per[S.pi];(p.tg[q[1]]=p.tg[q[1]]||{c:0,a:0})[q[2]]=v}
+else if(t=='bo'){var bo2=S.bos.filter(function(b){return b.n==q[1]})[0];bo2[q[2]]=v;if(q[2]=='mob'&&v&&!ph(bo2))msg('Mobile number needs at least 10 digits',1)}
+else if(t=='bt'){var bb=S.bos.filter(function(b){return b.n==q[1]})[0];bb.tg=bb.tg||{};bb.tg[S.pi]=bb.tg[S.pi]||{};var oo=bb.tg[S.pi][q[2]]=bb.tg[S.pi][q[2]]||{};if(el.value==='')delete oo[q[3]];else oo[q[3]]=v}
+else if(t=='e'){var e=gE(q[1],S.d);(e.cats[q[2]]=e.cats[q[2]]||{c:0,a:0})[q[3]]=v;S.dop=q[1]}
+else if(t=='x'){gE(q[1],S.d)[q[2]]=v;S.dop=q[1]}
+else if(t=='v'){var kk=q[1]+'|'+S.d;S.V[kk]=S.V[kk]||{lr:'Prepared'};S.V[kk][q[2]]=v;S.vb=q[1];gE(q[1],S.d)}
+save();if(t=='g')$('sd').textContent=S.name});
+R();
+</script>
+<script>if('serviceWorker' in navigator&&location.protocol.indexOf('http')==0)window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})</script></body></html>
