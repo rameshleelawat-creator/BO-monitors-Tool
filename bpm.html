@@ -38,11 +38,11 @@ var T={
 hi:{title:'दैनिक रिपोर्ट',bo:'आपका BO',pick:'अपना BO चुनें',date:'तारीख',today:'आज',yest:'कल',
 tip:'हर सेवा की संख्या और रकम (₹) लिखें। जिसमें काम नहीं हुआ, उसमें 0 रहने दें।',cnt:'संख्या',amt:'रकम (₹)',chk:'जाँचें',
 q:'क्या सब सही है?',send:'सही है, WhatsApp पर भेजें',edit:'सुधारें',warn:'ध्यान दें: पीले में संख्या और रकम में से एक 0 है। जाँच लें।',
-sent:'WhatsApp खुल गया है।',st1:'ग्रुप',st2:'चुनें और भेजें (Send) दबाएँ।',st3:'ग्रुप चुनें और भेजें (Send) दबाएँ।',again:'WhatsApp फिर खोलें',fix:'सुधार करना है',pickfirst:'पहले अपना BO चुनें',bad:'यह लिंक सही नहीं है। अपने साहब से नया लिंक माँगें।',done:'आज की रिपोर्ट भेजी जा चुकी है।',demo:'यह केवल नमूना है। असली लिंक आपके साहब भेजेंगे।'},
+sent:'WhatsApp खुल गया है।',st1:'ग्रुप',st2:'चुनें और भेजें (Send) दबाएँ।',st3:'ग्रुप चुनें और भेजें (Send) दबाएँ।',again:'WhatsApp फिर खोलें',fix:'सुधार करना है',pickfirst:'पहले अपना BO चुनें',bad:'यह लिंक सही नहीं है। अपने साहब से नया लिंक माँगें।',done:'आज की रिपोर्ट भेजी जा चुकी है।',demo:'यह केवल नमूना है। असली लिंक आपके साहब भेजेंगे।',lt:'लीड',lg:'बनी हुई लीड',lc:'कन्वर्ट हुई लीड',lerr:'कन्वर्ट हुई लीड, बनी हुई लीड से ज्यादा नहीं हो सकती।'},
 gu:{title:'દૈનિક રિપોર્ટ',bo:'તમારું BO',pick:'તમારું BO પસંદ કરો',date:'તારીખ',today:'આજે',yest:'ગઈકાલે',
 tip:'દરેક સેવાની સંખ્યા અને રકમ (₹) લખો. જેમાં કામ ન થયું હોય તેમાં 0 રહેવા દો.',cnt:'સંખ્યા',amt:'રકમ (₹)',chk:'તપાસો',
 q:'શું બધું સાચું છે?',send:'સાચું છે, WhatsApp પર મોકલો',edit:'સુધારો',warn:'ધ્યાન આપો: પીળામાં સંખ્યા અને રકમમાંથી એક 0 છે. તપાસી લો.',
-sent:'WhatsApp ખુલી ગયું છે.',st1:'ગ્રુપ',st2:'પસંદ કરો અને મોકલો (Send) દબાવો.',st3:'ગ્રુપ પસંદ કરો અને મોકલો (Send) દબાવો.',again:'WhatsApp ફરી ખોલો',fix:'સુધારવું છે',pickfirst:'પહેલા તમારું BO પસંદ કરો',bad:'આ લિંક સાચી નથી. સાહેબ પાસેથી નવી લિંક માંગો.',done:'આજનો રિપોર્ટ મોકલાઈ ગયો છે.',demo:'આ ફક્ત નમૂનો છે. અસલી લિંક તમારા સાહેબ મોકલશે.'}};
+sent:'WhatsApp ખુલી ગયું છે.',st1:'ગ્રુપ',st2:'પસંદ કરો અને મોકલો (Send) દબાવો.',st3:'ગ્રુપ પસંદ કરો અને મોકલો (Send) દબાવો.',again:'WhatsApp ફરી ખોલો',fix:'સુધારવું છે',pickfirst:'પહેલા તમારું BO પસંદ કરો',bad:'આ લિંક સાચી નથી. સાહેબ પાસેથી નવી લિંક માંગો.',done:'આજનો રિપોર્ટ મોકલાઈ ગયો છે.',demo:'આ ફક્ત નમૂનો છે. અસલી લિંક તમારા સાહેબ મોકલશે.',lt:'લીડ',lg:'બનેલી લીડ',lc:'કન્વર્ટ થયેલી લીડ',lerr:'કન્વર્ટ થયેલી લીડ, બનેલી લીડ કરતાં વધુ ન હોઈ શકે.'}};
 var CN={'Mail':['मेल','મેઇલ'],'International Mail':['अंतर्राष्ट्रीय मेल','આંતરરાષ્ટ્રીય મેઇલ'],'POSB Accounts':['POSB खाते','POSB ખાતા'],'PLI/RPLI Premium':['PLI/RPLI प्रीमियम','PLI/RPLI પ્રીમિયમ'],'CCS':['CCS','CCS']};
 var SH={'POSB Accounts':'POSB A/c','PLI/RPLI Premium':'PLI/RPLI','International Mail':'Int Mail'};
 var CFG=null,L='gu',BO='',DT='',V={},SC='f',DEMO=false;
@@ -62,7 +62,9 @@ function t(k){return T[L][k]}
 function num(el){el.value=el.value.replace(/[\u0966-\u096F\u0AE6-\u0AEF]/g,function(ch){var c=ch.charCodeAt(0);return String(c>=0x0AE6?c-0x0AE6:c-0x0966)}).replace(/\D/g,'').slice(0,9)}
 function key(){return 'bpm|'+BO+'|'+DT}
 function loadV(){V={};try{var s=ls(key());if(s)V=JSON.parse(s)}catch(e){V={}}}
-function sv(){if(!CFG)return;CFG.c.forEach(function(c){var a=$('c_'+c[0]),b=$('a_'+c[0]);if(a&&b)V[c[0]]={c:a.value,a:b.value}})}
+function sv(){if(!CFG)return;CFG.c.forEach(function(c){var a=$('c_'+c[0]),b=$('a_'+c[0]);if(a&&b)V[c[0]]={c:a.value,a:b.value}});var g=$('l_g'),k=$('l_c');if(g&&k)V.L={g:g.value,c:k.value}}
+function lv(){var x=V.L||{};return{g:(x.g===undefined||x.g==='')?'0':x.g,c:(x.c===undefined||x.c==='')?'0':x.c}}
+function lvn(){var x=V.L||{};return{g:parseInt(x.g,10)||0,c:parseInt(x.c,10)||0}}
 function val(id){var x=V[id]||{};return{c:parseInt(x.c,10)||0,a:parseInt(x.a,10)||0}}
 function setL(l){sv();L=l;ls('bpm_lang',l);R()}
 function setBO(v){sv();BO=v;ls('bpm_bo',v);loadV();R()}
@@ -78,17 +80,19 @@ h+='<div class="lg s"><button class="'+(DT==dd(0)?'on':'')+'" onclick="setD(\''+
 if(BO&&ls('bpmsent|'+BO+'|'+DT))h+='<div class="msg" style="color:#1e7b4f;font-weight:700">&#10003; '+t('done')+'</div>';
 h+='<div class="tip">'+t('tip')+'</div>';
 CFG.c.forEach(function(c){var v=V[c[0]]||{c:'0',a:'0'};h+='<div class="card"><b>'+esc(cname(c[1]))+'</b><div class="two"><div><label>'+t('cnt')+'</label><input id="c_'+c[0]+'" inputmode="numeric" pattern="[0-9]*" value="'+esc(v.c===''?'0':v.c)+'" onfocus="this.select()" oninput="num(this)"></div><div><label>'+t('amt')+'</label><input id="a_'+c[0]+'" inputmode="numeric" pattern="[0-9]*" value="'+esc(v.a===''?'0':v.a)+'" onfocus="this.select()" oninput="num(this)"></div></div></div>'});
+var l=lv();h+='<div class="card"><b>'+t('lt')+'</b><div class="two"><div><label>'+t('lg')+'</label><input id="l_g" inputmode="numeric" pattern="[0-9]*" value="'+esc(l.g)+'" onfocus="this.select()" oninput="num(this)"></div><div><label>'+t('lc')+'</label><input id="l_c" inputmode="numeric" pattern="[0-9]*" value="'+esc(l.c)+'" onfocus="this.select()" oninput="num(this)"></div></div></div>';
 return h+'<button class="go s" onclick="chk()">'+t('chk')+' &rarr;</button>'}
-function chk(){sv();if(!BO){alert(t('pickfirst'));return}ls(key(),JSON.stringify(V));SC='c';R()}
+function chk(){sv();if(!BO){alert(t('pickfirst'));return}var l=lvn();if(l.c>l.g){alert(t('lerr'));return}ls(key(),JSON.stringify(V));SC='c';R()}
 function rConf(){var w=false,h='<h1>'+t('q')+'</h1><div class="bo">'+esc(BO)+'</div><div class="msg">'+t('date')+': '+dm(DT)+'</div><div class="row"><b></b><span>'+t('cnt')+'</span><span>'+t('amt')+'</span></div>';
 CFG.c.forEach(function(c){var v=val(c[0]),bad=(v.c>0)!=(v.a>0);if(bad)w=true;h+='<div class="row'+(bad?' w':'')+'"><b>'+esc(cname(c[1]))+'</b><span>'+v.c+'</span><span>'+fmt(v.a)+'</span></div>'});
+var l=lvn();h+='<div class="row"><b>'+t('lg')+'</b><span>'+l.g+'</span><span></span></div><div class="row"><b>'+t('lc')+'</b><span>'+l.c+'</span><span></span></div>';
 if(w)h+='<div class="tip">&#9888; '+t('warn')+'</div>';
 return h+'<button class="ok s" onclick="snd()">'+t('send')+'</button><button class="gr s" onclick="SC=\'f\';R()">&#9998; '+t('edit')+'</button>'}
 function rDone(){var g=CFG.g?t('st1')+' &laquo;'+esc(CFG.g)+'&raquo; '+t('st2'):t('st3');return'<div class="big">&#9989;</div><h1>'+t('sent')+'</h1><div class="tip">'+g+'</div><button class="go s" onclick="snd()">'+t('again')+'</button><button class="gr s" onclick="SC=\'f\';R()">'+t('fix')+'</button>'}
 function msgText(){var rows=[],o={v:1,b:BO,d:DT,t:Date.now(),e:{}},b,k;
 CFG.c.forEach(function(c){var v=val(c[0]);o.e[c[0]]=[v.c,v.a];rows.push(pad((SH[c[1]]||c[1]).slice(0,9),10)+pad(v.c,6,1)+pad(fmt(v.a),10,1))});
-b=b64u(JSON.stringify(o));k=hk(b);
-return'*BO DAILY REPORT*\n```\n'+CFG.s+'\n'+pad('BO',13)+': '+BO+'\n'+pad('Date',13)+': '+dm(DT).slice(0,6)+DT.slice(2,4)+'\n==========================\n'+pad('Category',10)+pad('Count',6,1)+pad('Rs',10,1)+'\n--------------------------\n'+rows.join('\n')+'\n```\n#BOR#'+b+'.'+k+'#'}
+var l=lvn();o.l=[l.g,l.c];b=b64u(JSON.stringify(o));k=hk(b);
+return'*BO DAILY REPORT*\n```\n'+CFG.s+'\n'+pad('BO',13)+': '+BO+'\n'+pad('Date',13)+': '+dm(DT).slice(0,6)+DT.slice(2,4)+'\n==========================\n'+pad('Category',10)+pad('Count',6,1)+pad('Rs',10,1)+'\n--------------------------\n'+rows.join('\n')+'\n'+pad('Leads Gen',13)+': '+l.g+'\n'+pad('Leads Conv',13)+': '+l.c+'\n```\n#BOR#'+b+'.'+k+'#'}
 function snd(){ls(key(),JSON.stringify(V));ls('bpmsent|'+BO+'|'+DT,'1');SC='d';R();var u='https://wa.me/?text='+encodeURIComponent(msgText());var w=window.open(u,'_blank');if(!w)location.href=u}
 function init(){L=ls('bpm_lang')||'gu';if(L!='hi'&&L!='gu')L='gu';
 var q=new URLSearchParams(location.search).get('d');if(!q){DEMO=true;CFG={s:'DEMO Sub Division',o:['DEMO BO'],c:[['c0','Mail'],['c1','International Mail'],['c2','POSB Accounts'],['c3','PLI/RPLI Premium'],['c4','CCS']],g:''}}
