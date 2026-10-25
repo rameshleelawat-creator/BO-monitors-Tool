@@ -44,7 +44,7 @@ a.lk.s{background:var(--ok)}
 <header><b>BO Target Monitor</b><span id="sd"></span></header>
 <nav id="nav"></nav><main id="app"></main><div id="m"></div>
 <script>
-var K='bom_v1',TABS=['Setup','Visit','Daily','Report','Dashboard'],tab=0,S;
+var VER='2026.10.18-c',K='bom_v1',TABS=['Setup','Visit','Daily','Report','Dashboard'],tab=0,S;
 function $(i){return document.getElementById(i)}
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function fmt(n){return Math.round(n||0).toLocaleString('en-IN')}
@@ -210,7 +210,8 @@ h+='<section><h3>Import team reports</h3><div class="sm">Select one or more data
 var TA=['Setup','Visit','Daily','Report','Dashboard','Data','How to Use'],TT=['Visit Plan','Visit','Daily','Report','Contact','Data','How to Use'];
 function tabs(){if(S.mode=='team')return TT;return S.ent?['Dashboard','Contact','Visit Plan','Setup','Visit','Daily','Report','Data','How to Use']:['Dashboard','Contact','Visit Plan','Setup','Data','How to Use']}
 function setMode(m){if(m=='admin'&&S.mode!='admin'&&!askPin())return;S.mode=m;tab=(m=='admin'&&!S.bos.length)?tabs().indexOf('Setup'):0;save();R()}
-function R(){$('sd').textContent=S.name;
+var VER='2026.10.18';
+function R(){$('sd').textContent=S.name+' | v'+VER;
 if(!S.mode){$('nav').innerHTML='';$('app').innerHTML='<section><h3>Who is using this phone?</h3><button class="b" onclick="setMode(\'admin\')">I am the Inspector (admin)</button><button class="b s" onclick="setMode(\'team\')">I am a team member (MO / ME / OA)</button></section>';return}
 var T=tabs();if(tab>=T.length)tab=0;
 $('nav').innerHTML=T.map(function(t,i){return'<button class="'+(i==tab?'on':'')+'" onclick="tab='+i+';R();scrollTo(0,0)">'+t+'</button>'}).join('');
@@ -235,7 +236,7 @@ function backup(){dl(new File([JSON.stringify(S)],'BO_Monitor_Backup_'+S.d+'.jso
 function restore(el){rd(el,function(j){if(!j.cats||!j.bos||!j.per)return msg('This is not a backup file',1);if(!confirm('Replace all data on this phone with this backup?'))return;S=Object.assign(def(),j);save();R();msg('Backup restored')})}
 function vData(){var ad=S.mode!='team';return'<section><h3>Setup file</h3><div class="sm">'+(ad?'Send this file to the team. They import it once to get the BO list, owners, categories and targets.':'Import the setup file sent by the Inspector, then select your name in "I am".')+'</div>'+(ad?'<button class="b" onclick="sendSetup()">Share setup file</button><button class="b s" onclick="copySetup()">Copy setup as text</button>':'')+'<label>Import setup file<input type="file" accept=".json,.txt,application/json,text/plain" onchange="impSetup(this)"></label><label>Or paste setup text<textarea id="pst" rows="3"></textarea></label><button class="b s" onclick="impPaste()">Import pasted text</button></section>'+
 (ad?'':reqCorr())+'<section><h3>Backup</h3><button class="b s" onclick="backup()">Download backup</button><label>Restore backup<input type="file" accept=".json,.txt,application/json,text/plain" onchange="restore(this)"></label></section>'+
-(ad?bpmSec()+pinSec():'')+'<section><h3>Clear data</h3><div class="sm">Use this after testing with dummy data. Download a backup first if you may need the data again.</div><button class="b s" onclick="clrEntries()">Clear entries, keep setup</button><button class="b s" style="color:var(--ac)" onclick="clrAll()">Reset everything</button></section>'+(ad?'<section><h3>Entry tabs</h3><div class="sm">Visit, Daily and Report tabs are for MO / ME / OA. They are hidden for the Inspector by default. Show them only if you must enter data for a team member or test the tool.</div><button class="b s" onclick="S.ent=!S.ent;save();tab=tabs().indexOf(\'Data\');R()">'+(S.ent?'Hide':'Show')+' Visit, Daily and Report tabs</button></section>':'')+'<section><h3>Mode</h3><div class="sm">Current: '+(ad?'Inspector (admin)':'Team member')+'</div><button class="b s" onclick="if(confirm(\'Switch mode on this phone?\')){S.mode=\'\';save();R()}">Switch mode</button></section>'}
+(ad?bpmSec()+pinSec():'')+'<section><h3>Clear data</h3><div class="sm">Use this after testing with dummy data. Download a backup first if you may need the data again.</div><button class="b s" onclick="clrEntries()">Clear entries, keep setup</button><button class="b s" style="color:var(--ac)" onclick="clrAll()">Reset everything</button></section>'+(ad?'<section><h3>Entry tabs</h3><div class="sm">Visit, Daily and Report tabs are for MO / ME / OA. They are hidden for the Inspector by default. Show them only if you must enter data for a team member or test the tool.</div><button class="b s" onclick="S.ent=!S.ent;save();tab=tabs().indexOf(\'Data\');R()">'+(S.ent?'Hide':'Show')+' Visit, Daily and Report tabs</button></section>':'')+'<section><h3>Mode</h3><div class="sm">Version '+VER+'. Current: '+(ad?'Inspector (admin)':'Team member')+'</div><button class="b s" onclick="if(confirm(\'Switch mode on this phone?\')){S.mode=\'\';save();R()}">Switch mode</button></section>'}
 function xlsxOut(){if(typeof XLSX=='undefined')return msg('Excel writer did not load. Check internet and reload.',1);var p=S.per[S.pi],hd=['BO','SO','BPM','Mobile','Owner','Type'];S.cats.forEach(function(c){hd.push(c.n+' count','Target count',c.n+' amount','Target amount')});
 var rows=[hd];S.bos.forEach(function(b){var a=agg([b.n],p.f,p.t),r=[b.n,b.so,b.bpm,b.mob,b.own,b.ty=='V'?'Visit':'Monitor'];S.cats.forEach(function(c){var t=tgB(b,p,c.id),x=a.cats[c.id];r.push(x.c,t.c,x.a,t.a)});rows.push(r)});
 var k=XLSX.utils.book_new();XLSX.utils.book_append_sheet(k,XLSX.utils.aoa_to_sheet(rows),'Report');XLSX.writeFile(k,'BO_Report_'+p.f+'_to_'+p.t+'.xlsx')}
@@ -595,7 +596,7 @@ else if(t=='bt'){var bb=S.bos.filter(function(b){return b.n==q[1]})[0];bb.tg=bb.
 else if(t=='e'){var e=gE(q[1],S.d);(e.cats[q[2]]=e.cats[q[2]]||{c:0,a:0})[q[3]]=v;S.dop=q[1]}
 else if(t=='x'){gE(q[1],S.d)[q[2]]=v;S.dop=q[1]}
 else if(t=='v'){var kk=q[1]+'|'+S.d;S.V[kk]=S.V[kk]||{lr:'Prepared'};S.V[kk][q[2]]=v;S.vb=q[1];gE(q[1],S.d)}
-save();if(t=='g')$('sd').textContent=S.name});
+save();if(t=='g')$('sd').textContent=S.name+' | v'+VER});
 R();
 </script>
 <script>if('serviceWorker' in navigator&&location.protocol.indexOf('http')==0)window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})</script></body></html>
